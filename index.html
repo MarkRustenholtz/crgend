@@ -1005,11 +1005,7 @@
           </button>
 
           <button type="button" class="btn btn-primary" id="importEsrBtn">
-            Importer planning ESR
-          </button>
-
-          <button type="button" class="btn btn-secondary" id="importKnownEsrBtn">
-            Importer liste ESR
+            Importer ESR
           </button>
 
           <input
@@ -1018,18 +1014,11 @@
             accept=".pdf,application/pdf"
             hidden
           />
-
-          <input
-            type="file"
-            id="knownEsrFileInput"
-            accept=".json,.csv,application/json,text/csv,text/plain"
-            hidden
-          />
         </div>
 
         <div class="esr-import-status" id="esrImportStatus"></div>
 
-        <p class="hint">« Importer planning ESR » lit un tableau PDF selon la date, le site et les horaires. « Importer liste ESR » reprend le principe de Border Force : import JSON/CSV, dédoublonnage par NIGEND, mémoire locale prioritaire et création directe des vignettes.</p>
+        <p class="hint">L’import ESR lit le planning PDF selon la date, le site et les horaires. Le NIGEND est la clé principale pour retrouver et mettre à jour un réserviste déjà mémorisé.</p>
       </section>
 
       <section class="card form-section" data-section="deroulement">
@@ -1237,9 +1226,7 @@
       const status = document.getElementById("status");
       const sectionMenu = document.getElementById("sectionMenu");
       const importEsrBtn = document.getElementById("importEsrBtn");
-      const importKnownEsrBtn = document.getElementById("importKnownEsrBtn");
       const esrFileInput = document.getElementById("esrFileInput");
-      const knownEsrFileInput = document.getElementById("knownEsrFileInput");
       const esrImportStatus = document.getElementById("esrImportStatus");
       const esrMissionModal = document.getElementById("esrMissionModal");
       const esrMissionChoices = document.getElementById("esrMissionChoices");
@@ -1349,18 +1336,28 @@
         if (!profile.nom && !profile.nigend) return false;
 
         const known = readKnownReservistes();
-        const key = reservisteMemoryKey(profile);
+        const wantedNigend = normalizeSearch(profile.nigend);
+        const wantedName = normalizeSearch(profile.nom);
 
-        let existingIndex = known.findIndex(item =>
-          reservisteMemoryKey(normalizeReserviste(item)) === key
-        );
+        let existingIndex = -1;
 
-        // Si le NIGEND vient d'être ajouté à une ancienne fiche enregistrée
-        // uniquement par le nom, on met à jour cette fiche au lieu de la doubler.
-        if (existingIndex < 0 && profile.nom) {
-          const normalizedName = normalizeSearch(profile.nom);
+        // Le NIGEND est toujours prioritaire. Deux personnes portant le même
+        // nom mais ayant des NIGEND différents ne seront jamais fusionnées.
+        if (wantedNigend) {
           existingIndex = known.findIndex(item =>
-            normalizeSearch(item.nom) === normalizedName
+            normalizeSearch(item.nigend) === wantedNigend
+          );
+
+          // Compatibilité avec une ancienne fiche qui n’avait pas encore de NIGEND.
+          if (existingIndex < 0 && wantedName) {
+            existingIndex = known.findIndex(item =>
+              !normalizeSearch(item.nigend) &&
+              normalizeSearch(item.nom) === wantedName
+            );
+          }
+        } else if (wantedName) {
+          existingIndex = known.findIndex(item =>
+            normalizeSearch(item.nom) === wantedName
           );
         }
 
@@ -1511,327 +1508,6 @@
         esrImportStatus.classList.toggle("success", type === "success");
       }
 
-
-      function normalizeHeaderName(text) {
-        return normalizeSearch(text)
-          .replace(/[^A-Z0-9]+/g, "");
-      }
-
-      function pickField(record, aliases) {
-        const entries = Object.entries(record || {});
-        const wanted = aliases.map(normalizeHeaderName);
-
-        for (const [key, rawValue] of entries) {
-          if (wanted.includes(normalizeHeaderName(key))) {
-            return String(rawValue ?? "").trim();
-          }
-        }
-
-        return "";
-      }
-
-      function normalizeImportedReserviste(record = {}) {
-        const grade = pickField(record, ["grade"]);
-        const nigend = pickField(record, ["nigend", "nigend", "numero nigend", "n° nigend"]);
-        const nom = pickField(record, ["nom", "nom prenom", "nom prénom", "identite", "identité"]);
-        const prenom = pickField(record, ["prenom", "prénom"]);
-        const qualification = pickField(record, ["qualification", "qualif", "qualifications"]);
-        const unite = pickField(record, [
-          "unite",
-          "unité",
-          "unite affectation",
-          "unité affectation",
-          "crt",
-          "affectation"
-        ]);
-
-        const fullName = [nom, prenom]
-          .filter(Boolean)
-          .join(" ")
-          .replace(/\s+/g, " ")
-          .trim();
-
-        return normalizeReserviste({
-          grade,
-          nom: fullName,
-          nigend,
-          qualification,
-          unite
-        });
-      }
-
-      function extractReservisteArrayFromJson(parsed) {
-        if (Array.isArray(parsed)) return parsed;
-
-        if (parsed && typeof parsed === "object") {
-          for (const key of [
-            "reservistes",
-            "réservistes",
-            "esr",
-            "esrConnus",
-            "esr_connus",
-            "data",
-            "liste"
-          ]) {
-            if (Array.isArray(parsed[key])) return parsed[key];
-          }
-        }
-
-        return [];
-      }
-
-      function detectCsvSeparator(firstLine) {
-        const candidates = [";", "\t", ","];
-        return candidates
-          .map(separator => ({
-            separator,
-            count: firstLine.split(separator).length - 1
-          }))
-          .sort((a, b) => b.count - a.count)[0]?.separator || ";";
-      }
-
-      function parseCsvLine(line, separator) {
-        const values = [];
-        let current = "";
-        let quoted = false;
-
-        for (let index = 0; index < line.length; index += 1) {
-          const character = line[index];
-
-          if (character === '"') {
-            if (quoted && line[index + 1] === '"') {
-              current += '"';
-              index += 1;
-            } else {
-              quoted = !quoted;
-            }
-            continue;
-          }
-
-          if (character === separator && !quoted) {
-            values.push(current.trim());
-            current = "";
-            continue;
-          }
-
-          current += character;
-        }
-
-        values.push(current.trim());
-        return values;
-      }
-
-      function parseReservistesCsv(text) {
-        const lines = String(text || "")
-          .replace(/^\uFEFF/, "")
-          .split(/\r?\n/)
-          .filter(line => line.trim());
-
-        if (lines.length < 2) return [];
-
-        const separator = detectCsvSeparator(lines[0]);
-        const headers = parseCsvLine(lines[0], separator);
-
-        return lines.slice(1).map(line => {
-          const values = parseCsvLine(line, separator);
-          const record = {};
-
-          headers.forEach((header, index) => {
-            record[header] = values[index] ?? "";
-          });
-
-          return record;
-        });
-      }
-
-      function mergeImportedReservisteWithLocal(imported, local) {
-        const importedProfile = normalizeReserviste(imported);
-        const localProfile = normalizeReserviste(local || {});
-
-        // Comme dans Border Force : ce qui est déjà enregistré dans le
-        // téléphone reste prioritaire. L'import ne complète que les vides.
-        return normalizeReserviste({
-          grade: localProfile.grade || importedProfile.grade,
-          nom: localProfile.nom || importedProfile.nom,
-          nigend: localProfile.nigend || importedProfile.nigend,
-          qualification: localProfile.qualification || importedProfile.qualification,
-          unite: localProfile.unite || importedProfile.unite
-        });
-      }
-
-      function findKnownReservisteByIdentity(profile, list = readKnownReservistes()) {
-        const nigend = normalizeSearch(profile.nigend);
-        const nom = normalizeSearch(profile.nom);
-
-        return list.find(item =>
-          nigend && normalizeSearch(item.nigend) === nigend
-        ) || list.find(item =>
-          nom && normalizeSearch(item.nom) === nom
-        ) || null;
-      }
-
-      function importProfilesIntoMemory(profiles) {
-        const known = readKnownReservistes();
-        let added = 0;
-        let updated = 0;
-
-        profiles.forEach(importedProfile => {
-          const existing = findKnownReservisteByIdentity(importedProfile, known);
-          const merged = mergeImportedReservisteWithLocal(importedProfile, existing);
-
-          if (!merged.nom && !merged.nigend) return;
-
-          const targetIndex = known.findIndex(item =>
-            existing && reservisteMemoryKey(item) === reservisteMemoryKey(existing)
-          );
-
-          const saved = {
-            ...merged,
-            updatedAt: existing?.updatedAt || Date.now()
-          };
-
-          if (targetIndex >= 0) {
-            known[targetIndex] = saved;
-            updated += 1;
-          } else {
-            known.push(saved);
-            added += 1;
-          }
-        });
-
-        known.sort((a, b) =>
-          normalizeSearch(a.nom).localeCompare(normalizeSearch(b.nom), "fr")
-        );
-
-        writeKnownReservistes(known);
-        return { known, added, updated };
-      }
-
-      function currentReservisteIdentitySet() {
-        const identities = new Set();
-
-        collectReservistes().forEach(profile => {
-          const key = profile.nigend
-            ? `NIGEND:${normalizeSearch(profile.nigend)}`
-            : `NOM:${normalizeSearch(profile.nom)}`;
-
-          if (key !== "NOM:") identities.add(key);
-        });
-
-        return identities;
-      }
-
-      function addImportedProfilesAsCards(profiles) {
-        const current = currentReservisteIdentitySet();
-        let created = 0;
-
-        // Retire la vignette totalement vide avant l'ajout.
-        [...reservistesList.querySelectorAll(".reserviste")].forEach(wrapper => {
-          const profile = readReserviste(wrapper);
-          const empty = !profile.grade &&
-            !profile.nom &&
-            !profile.nigend &&
-            !profile.qualification &&
-            !profile.unite;
-
-          if (empty) wrapper.remove();
-        });
-
-        profiles.forEach(profile => {
-          const key = profile.nigend
-            ? `NIGEND:${normalizeSearch(profile.nigend)}`
-            : `NOM:${normalizeSearch(profile.nom)}`;
-
-          if (!profile.nom && !profile.nigend) return;
-          if (current.has(key)) return;
-
-          createReserviste({
-            ...profile,
-            imported: true,
-            validated: false
-          });
-
-          current.add(key);
-          created += 1;
-        });
-
-        if (!reservistesList.querySelector(".reserviste")) {
-          createReserviste();
-        }
-
-        return created;
-      }
-
-      async function handleKnownEsrImport(file) {
-        if (!file) return;
-
-        importKnownEsrBtn.disabled = true;
-        importKnownEsrBtn.textContent = "Import en cours…";
-        setEsrImportStatus("Lecture de la liste ESR…");
-
-        try {
-          const text = await file.text();
-          const extension = file.name.split(".").pop()?.toLowerCase();
-          let rawRecords = [];
-
-          if (extension === "json") {
-            const parsed = JSON.parse(text);
-            rawRecords = extractReservisteArrayFromJson(parsed);
-          } else {
-            rawRecords = parseReservistesCsv(text);
-          }
-
-          const importedProfiles = rawRecords
-            .map(normalizeImportedReserviste)
-            .filter(profile => profile.nom || profile.nigend);
-
-          if (!importedProfiles.length) {
-            throw new Error(
-              "Aucun ESR valide n'a été trouvé. Le fichier doit contenir au minimum un nom ou un NIGEND."
-            );
-          }
-
-          const uniqueProfiles = [];
-          const seen = new Set();
-
-          importedProfiles.forEach(profile => {
-            const key = profile.nigend
-              ? `NIGEND:${normalizeSearch(profile.nigend)}`
-              : `NOM:${normalizeSearch(profile.nom)}`;
-
-            if (!seen.has(key)) {
-              seen.add(key);
-              uniqueProfiles.push(profile);
-            }
-          });
-
-          const { known, added, updated } = importProfilesIntoMemory(uniqueProfiles);
-
-          const missionProfiles = uniqueProfiles.map(profile => {
-            const local = findKnownReservisteByIdentity(profile, known);
-            return mergeImportedReservisteWithLocal(profile, local);
-          });
-
-          const created = addImportedProfilesAsCards(missionProfiles);
-
-          saveDraft(false);
-          setEsrImportStatus(
-            `${uniqueProfiles.length} ESR lus : ${added} ajouté(s), ${updated} déjà connu(s), ${created} vignette(s) créée(s).`,
-            "success"
-          );
-          showStatus("Import ESR terminé. Vérifie puis valide les vignettes.");
-        } catch (error) {
-          console.error(error);
-          setEsrImportStatus(
-            `Import impossible : ${error?.message || "fichier non reconnu"}`,
-            "error"
-          );
-        } finally {
-          importKnownEsrBtn.disabled = false;
-          importKnownEsrBtn.textContent = "Importer liste ESR";
-          knownEsrFileInput.value = "";
-        }
-      }
 
       async function loadPdfJsModule() {
         if (!pdfJsModulePromise) {
@@ -2092,11 +1768,101 @@
         const wantedNigend = normalizeSearch(person.nigend);
         const wantedName = normalizeSearch(person.nom);
 
+        if (wantedNigend) {
+          const byNigend = known.find(profile =>
+            normalizeSearch(profile.nigend) === wantedNigend
+          );
+
+          if (byNigend) return byNigend;
+
+          // Une ancienne fiche sans NIGEND peut être rattachée par le nom.
+          return known.find(profile =>
+            !normalizeSearch(profile.nigend) &&
+            wantedName &&
+            normalizeSearch(profile.nom) === wantedName
+          ) || null;
+        }
+
         return known.find(profile =>
-          wantedNigend && normalizeSearch(profile.nigend) === wantedNigend
-        ) || known.find(profile =>
           wantedName && normalizeSearch(profile.nom) === wantedName
         ) || null;
+      }
+
+      function updateKnownReservisteFromEsr(person) {
+        const known = readKnownReservistes();
+        const wantedNigend = normalizeSearch(person.nigend);
+        const wantedName = normalizeSearch(person.nom);
+
+        let existingIndex = -1;
+
+        if (wantedNigend) {
+          existingIndex = known.findIndex(profile =>
+            normalizeSearch(profile.nigend) === wantedNigend
+          );
+
+          if (existingIndex < 0 && wantedName) {
+            existingIndex = known.findIndex(profile =>
+              !normalizeSearch(profile.nigend) &&
+              normalizeSearch(profile.nom) === wantedName
+            );
+          }
+        } else if (wantedName) {
+          existingIndex = known.findIndex(profile =>
+            normalizeSearch(profile.nom) === wantedName
+          );
+        }
+
+        const existing = existingIndex >= 0
+          ? normalizeReserviste(known[existingIndex])
+          : normalizeReserviste({});
+
+        const importedUnite = String(
+          person.unite || person.crt || person.CRT || ""
+        ).trim();
+
+        const merged = normalizeReserviste({
+          // Le grade du planning ESR devient la valeur à jour.
+          grade: person.grade || existing.grade,
+          nom: person.nom || existing.nom,
+          nigend: person.nigend || existing.nigend,
+          qualification: person.qualification || existing.qualification,
+          // Le CRT/unité est mis à jour si le fichier importé le contient.
+          // Sinon, celui déjà mémorisé est conservé.
+          unite: importedUnite || existing.unite
+        });
+
+        const changedFields = [];
+
+        if (existingIndex >= 0) {
+          if (merged.grade !== existing.grade) changedFields.push("grade");
+          if (merged.unite !== existing.unite) changedFields.push("CRT");
+          if (merged.nom !== existing.nom) changedFields.push("nom");
+          if (merged.nigend !== existing.nigend) changedFields.push("NIGEND");
+
+          known[existingIndex] = {
+            ...merged,
+            updatedAt: changedFields.length
+              ? Date.now()
+              : (known[existingIndex].updatedAt || Date.now())
+          };
+        } else {
+          known.push({
+            ...merged,
+            updatedAt: Date.now()
+          });
+          changedFields.push("nouvelle fiche");
+        }
+
+        known.sort((a, b) =>
+          normalizeSearch(a.nom).localeCompare(normalizeSearch(b.nom), "fr")
+        );
+
+        writeKnownReservistes(known);
+
+        return {
+          profile: merged,
+          changedFields
+        };
       }
 
       function closeEsrMissionModal() {
@@ -2164,19 +1930,21 @@
 
         reservistesList.innerHTML = "";
 
+        let updatedProfiles = 0;
+
         mission.personnel.forEach(person => {
-          const known = findKnownReservisteForImport(person);
-          const profile = {
-            grade: person.grade,
-            nom: person.nom,
-            nigend: person.nigend,
-            qualification: known?.qualification || "",
-            unite: known?.unite || "",
+          const result = updateKnownReservisteFromEsr(person);
+          const profile = result.profile;
+
+          if (result.changedFields.length) {
+            updatedProfiles += 1;
+          }
+
+          createReserviste({
+            ...profile,
             imported: true,
             validated: false
-          };
-
-          createReserviste(profile);
+          });
         });
 
         if (!mission.personnel.length) createReserviste();
@@ -2188,10 +1956,10 @@
 
         saveDraft(false);
         setEsrImportStatus(
-          `${mission.personnel.length} réserviste(s) importé(s) pour le ${mission.date}, de ${mission.start || "?"} à ${mission.end || "?"}.`,
+          `${mission.personnel.length} réserviste(s) importé(s) pour le ${mission.date}, de ${mission.start || "?"} à ${mission.end || "?"}. ${updatedProfiles} fiche(s) connue(s) ajoutée(s) ou actualisée(s) par NIGEND.`,
           "success"
         );
-        showStatus("Import ESR terminé. Vérifie puis valide les vignettes.");
+        showStatus("Import ESR terminé. Le grade et le CRT ont été actualisés lorsqu’ils étaient présents dans le fichier.");
       }
 
       async function handleEsrPdfImport(file) {
@@ -2988,6 +2756,10 @@
         const redacteurConserve = value("redacteur");
 
         clearTimeout(autoSaveTimer);
+
+        // On efface uniquement le compte rendu en cours.
+        // KNOWN_RESERVISTES_KEY n’est jamais supprimée ici : les ESR connus,
+        // leur grade, leur NIGEND, leur qualification et leur CRT restent mémorisés.
         localStorage.removeItem(STORAGE_KEY);
         deroulementFinalEdited = false;
         applyData({});
@@ -2998,7 +2770,7 @@
         // Enregistrement immédiat du nouveau brouillon avec le rédacteur conservé.
         saveDraft(false);
 
-        showStatus("Nouveau compte rendu prêt. Le rédacteur a été conservé.");
+        showStatus("Nouveau compte rendu prêt. Le rédacteur et les ESR connus ont été conservés.");
         showSection("mission", false);
         window.scrollTo({ top: 0, behavior: "smooth" });
       }
@@ -3024,14 +2796,6 @@
 
       esrFileInput.addEventListener("change", () => {
         handleEsrPdfImport(esrFileInput.files?.[0]);
-      });
-
-      importKnownEsrBtn.addEventListener("click", () => {
-        knownEsrFileInput.click();
-      });
-
-      knownEsrFileInput.addEventListener("change", () => {
-        handleKnownEsrImport(knownEsrFileInput.files?.[0]);
       });
 
       document.getElementById("closeEsrModalBtn").addEventListener("click", closeEsrMissionModal);

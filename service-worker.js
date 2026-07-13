@@ -1,4 +1,4 @@
-const CACHE_NAME = "cr-mission-cache-v4.0.0-borderforce-esr";
+const CACHE_NAME = "cr-mission-cache-v5.0.0-esr-final";
 
 const APP_SHELL = [
   "./",
