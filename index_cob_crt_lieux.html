@@ -1,0 +1,3048 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#17324d" />
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+  <link rel="apple-touch-icon" href="./icon-192.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="CR Mission" />
+  <title>Compte rendu de mission</title>
+  <style>
+    :root {
+      --bleu: #17324d;
+      --bleu-clair: #eaf1f7;
+      --fond: #f3f5f7;
+      --texte: #15191d;
+      --bordure: #c9d1d9;
+      --danger: #b42318;
+      --blanc: #ffffff;
+      --ombre: 0 8px 24px rgba(0, 0, 0, .08);
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--texte);
+      background: var(--fond);
+    }
+
+    button, input, textarea, select {
+      font: inherit;
+    }
+
+    button {
+      touch-action: manipulation;
+    }
+
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: var(--bleu);
+      color: #fff;
+      padding: 14px 16px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.18);
+    }
+
+    .app-header h1 {
+      margin: 0;
+      font-size: 1.18rem;
+      text-align: center;
+      letter-spacing: .02em;
+    }
+
+    .app-header p {
+      margin: 5px 0 0;
+      text-align: center;
+      font-size: .84rem;
+      opacity: .86;
+    }
+
+
+    .section-menu-wrap {
+      position: sticky;
+      top: 72px;
+      z-index: 14;
+      padding: 10px 0;
+      background: linear-gradient(to bottom, var(--fond) 75%, rgba(243,245,247,0));
+    }
+
+    .section-menu {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding: 2px 2px 8px;
+      scrollbar-width: thin;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .section-menu button {
+      flex: 0 0 auto;
+      min-height: 42px;
+      border: 1px solid #aebdca;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--bleu);
+      padding: 9px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .section-menu button.active {
+      border-color: var(--bleu);
+      background: var(--bleu);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(23,50,77,.22);
+    }
+
+
+    .section-menu button.menu-generate {
+      border-color: #1d6f42;
+      background: #1d6f42;
+      color: #fff;
+    }
+
+    .section-menu button.menu-generate:active {
+      transform: translateY(1px);
+    }
+
+    .section-menu button.menu-new-report {
+      border-color: #b42318;
+      background: #fff0ef;
+      color: #b42318;
+    }
+
+    .section-menu button.menu-new-report:active {
+      transform: translateY(1px);
+    }
+
+    .mission-subtitle {
+      margin: 20px 0 12px;
+      padding-top: 16px;
+      border-top: 2px solid var(--bleu-clair);
+      color: var(--bleu);
+      font-size: 1rem;
+    }
+
+    .deroulement-live {
+      margin-top: 16px;
+      border: 1px solid #9fb2c4;
+      border-radius: 11px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .deroulement-live-title {
+      padding: 10px 12px;
+      background: var(--bleu);
+      color: #fff;
+      font-weight: 700;
+      font-size: .9rem;
+    }
+
+    .deroulement-live-text {
+      display: block;
+      width: 100%;
+      min-height: 180px;
+      padding: 12px;
+      border: 0;
+      border-radius: 0;
+      background: #fff;
+      white-space: pre-wrap;
+      line-height: 1.45;
+      font-size: .9rem;
+      font-family: Arial, Helvetica, sans-serif;
+      color: #1f2933;
+      resize: vertical;
+      outline: none;
+    }
+
+    .deroulement-live-text:focus {
+      box-shadow: inset 0 0 0 2px rgba(72,121,166,.35);
+    }
+
+    .deroulement-final-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 9px 10px;
+      border-top: 1px solid #d7e0e8;
+      background: #f7f9fb;
+      color: #5f6c78;
+      font-size: .78rem;
+    }
+
+    .deroulement-final-actions .btn {
+      flex: 0 0 auto;
+    }
+
+
+    .form-section {
+      display: none;
+    }
+
+    .form-section.active {
+      display: block;
+      animation: sectionIn .18s ease-out;
+    }
+
+    @keyframes sectionIn {
+      from { opacity: .35; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+
+    .container {
+      width: min(980px, calc(100% - 24px));
+      margin: 18px auto 36px;
+    }
+
+    .card {
+      background: var(--blanc);
+      border-radius: 14px;
+      box-shadow: var(--ombre);
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+
+    .card h2 {
+      margin: 0 0 15px;
+      font-size: 1.03rem;
+      color: var(--bleu);
+      border-bottom: 2px solid var(--bleu-clair);
+      padding-bottom: 9px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 0 0 6px;
+      font-size: .9rem;
+    }
+
+    input, textarea, select {
+      width: 100%;
+      border: 1px solid var(--bordure);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--texte);
+      padding: 11px 12px;
+      outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    input:focus, textarea:focus, select:focus {
+      border-color: #4879a6;
+      box-shadow: 0 0 0 3px rgba(72,121,166,.15);
+    }
+
+    textarea {
+      min-height: 118px;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
+    textarea.large { min-height: 190px; }
+
+    .hint {
+      margin: 6px 0 0;
+      color: #66727e;
+      font-size: .78rem;
+    }
+
+    .reserviste {
+      border: 1px solid var(--bordure);
+      border-radius: 11px;
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #fbfcfd;
+    }
+
+    .reserviste-grid {
+      display: grid;
+      grid-template-columns: 90px minmax(170px, 1.35fr) 125px minmax(130px, 1fr) minmax(150px, 1.15fr) auto;
+      gap: 9px;
+      align-items: end;
+    }
+
+    .reserviste.validated {
+      border-color: #79b692;
+      background: #f3fbf6;
+      box-shadow: inset 0 0 0 1px rgba(29,111,66,.08);
+    }
+
+    .reserviste label {
+      font-size: .76rem;
+      margin-bottom: 4px;
+    }
+
+    .reserviste input, .reserviste select {
+      padding: 9px 10px;
+    }
+
+    .reserviste-field {
+      position: relative;
+      min-width: 0;
+    }
+
+    .reserviste-autocomplete {
+      position: absolute;
+      z-index: 40;
+      left: 0;
+      right: 0;
+      top: calc(100% + 4px);
+      max-height: 270px;
+      overflow-y: auto;
+      border: 1px solid #9fb2c4;
+      border-radius: 9px;
+      background: #fff;
+      box-shadow: 0 9px 24px rgba(0,0,0,.18);
+    }
+
+    .reserviste-autocomplete.hidden {
+      display: none !important;
+    }
+
+    .reserviste-suggestion {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 9px 10px;
+      border: 0;
+      border-bottom: 1px solid #e4e9ee;
+      border-radius: 0;
+      background: #fff;
+      color: var(--texte);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .reserviste-suggestion:last-child {
+      border-bottom: 0;
+    }
+
+    .reserviste-suggestion:hover,
+    .reserviste-suggestion:focus {
+      background: var(--bleu-clair);
+      outline: none;
+    }
+
+    .reserviste-suggestion strong {
+      display: block;
+      color: var(--bleu);
+      font-size: .86rem;
+    }
+
+    .reserviste-suggestion small {
+      display: block;
+      margin-top: 2px;
+      color: #5f6c78;
+      font-size: .74rem;
+      line-height: 1.3;
+    }
+
+    .reserviste-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      align-self: end;
+    }
+
+    .reserviste-status {
+      grid-column: 1 / -1;
+      min-height: 1em;
+      margin-top: -1px;
+      color: #52606d;
+      font-size: .76rem;
+    }
+
+    .reserviste.validated .reserviste-status {
+      color: #1d6f42;
+      font-weight: 700;
+    }
+
+
+    .reserviste-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 10px;
+    }
+
+    .esr-import-status {
+      min-height: 1.25em;
+      margin-top: 8px;
+      color: #52606d;
+      font-size: .8rem;
+    }
+
+    .esr-import-status.error {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .esr-import-status.success {
+      color: #1d6f42;
+      font-weight: 700;
+    }
+
+    .esr-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: rgba(11, 24, 36, .62);
+    }
+
+    .esr-modal.hidden {
+      display: none !important;
+    }
+
+    .esr-modal-card {
+      width: min(720px, 100%);
+      max-height: min(82vh, 760px);
+      overflow: hidden;
+      border-radius: 14px;
+      background: #fff;
+      box-shadow: 0 18px 50px rgba(0,0,0,.32);
+    }
+
+    .esr-modal-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 16px;
+      border-bottom: 1px solid #dce3e9;
+      background: var(--bleu-clair);
+    }
+
+    .esr-modal-header h2 {
+      margin: 0;
+      color: var(--bleu);
+      font-size: 1rem;
+    }
+
+    .esr-modal-header p {
+      margin: 5px 0 0;
+      color: #52606d;
+      font-size: .8rem;
+      line-height: 1.35;
+    }
+
+    .esr-modal-close {
+      flex: 0 0 auto;
+      width: 38px;
+      height: 38px;
+      border: 0;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--bleu);
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+
+    .esr-mission-choices {
+      max-height: calc(min(82vh, 760px) - 88px);
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .esr-mission-choice {
+      display: block;
+      width: 100%;
+      margin-bottom: 9px;
+      padding: 12px;
+      border: 1px solid #b7c5d1;
+      border-radius: 10px;
+      background: #fff;
+      color: var(--texte);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .esr-mission-choice:last-child {
+      margin-bottom: 0;
+    }
+
+    .esr-mission-choice:hover,
+    .esr-mission-choice:focus {
+      border-color: var(--bleu);
+      background: var(--bleu-clair);
+      outline: none;
+    }
+
+    .esr-mission-choice strong {
+      display: block;
+      color: var(--bleu);
+      font-size: .92rem;
+    }
+
+    .esr-mission-choice span {
+      display: block;
+      margin-top: 4px;
+      font-size: .8rem;
+      line-height: 1.35;
+    }
+
+    .esr-mission-choice small {
+      display: block;
+      margin-top: 4px;
+      color: #62707d;
+      font-size: .74rem;
+      line-height: 1.35;
+    }
+
+
+    .deroulement-editor,
+    .deroulement-item-grid {
+      display: grid;
+      grid-template-columns: 110px minmax(190px, 1.15fr) minmax(240px, 1.8fr) auto;
+      gap: 9px;
+      align-items: end;
+    }
+
+    .deroulement-editor {
+      border: 1px solid var(--bordure);
+      border-radius: 11px;
+      padding: 12px;
+      background: var(--bleu-clair);
+      margin-bottom: 12px;
+    }
+
+    .deroulement-editor label,
+    .deroulement-item label {
+      font-size: .76rem;
+      margin-bottom: 4px;
+    }
+
+    .deroulement-editor textarea,
+    .deroulement-item textarea {
+      min-height: 44px;
+      height: 44px;
+      padding: 9px 10px;
+      resize: vertical;
+    }
+
+    .deroulement-item {
+      border: 1px solid var(--bordure);
+      border-radius: 11px;
+      padding: 12px;
+      margin-bottom: 9px;
+      background: #fbfcfd;
+    }
+
+
+    .deroulement-item.validated {
+      padding: 0;
+      overflow: hidden;
+      background: #fff;
+    }
+
+    .deroulement-item.validated .deroulement-item-grid {
+      display: none;
+    }
+
+    .deroulement-item:not(.validated) .deroulement-summary {
+      display: none;
+    }
+
+    .deroulement-summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 11px;
+    }
+
+    .deroulement-summary-main {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      min-width: 0;
+      line-height: 1.35;
+    }
+
+    .deroulement-summary-time {
+      flex: 0 0 auto;
+      min-width: 47px;
+      font-weight: 800;
+      color: var(--bleu);
+    }
+
+    .deroulement-summary-text {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: .88rem;
+    }
+
+    .deroulement-summary .recall-deroulement {
+      flex: 0 0 auto;
+    }
+
+    .deroulement-item-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .deroulement-list-heading {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 4px 0 8px;
+      color: var(--bleu);
+      font-weight: 700;
+      font-size: .88rem;
+    }
+
+    .deroulement-list-heading small {
+      color: #66727e;
+      font-weight: 400;
+      text-align: right;
+    }
+
+    .deroulement-empty {
+      border: 1px dashed var(--bordure);
+      border-radius: 10px;
+      padding: 14px;
+      color: #66727e;
+      text-align: center;
+      font-size: .85rem;
+      margin-bottom: 10px;
+    }
+
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 15px;
+      font-weight: 700;
+      cursor: pointer;
+      min-height: 44px;
+    }
+
+    .btn-primary {
+      background: var(--bleu);
+      color: #fff;
+    }
+
+    .btn-secondary {
+      background: #e7edf2;
+      color: #1e2d3b;
+    }
+
+    .btn-outline {
+      background: #fff;
+      color: var(--bleu);
+      border: 1px solid #9fb2c4;
+    }
+
+    .btn-danger {
+      background: #fff0ef;
+      color: var(--danger);
+      border: 1px solid #f1b7b1;
+    }
+
+    .btn-small {
+      min-height: 38px;
+      padding: 8px 11px;
+      font-size: .82rem;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      margin: 18px 0 4px;
+    }
+
+
+    .status {
+      text-align: center;
+      color: #52606d;
+      font-size: .82rem;
+      min-height: 1.2em;
+      margin-top: 8px;
+    }
+
+    .hidden { display: none !important; }
+
+    /* Aperçu du compte rendu */
+    #previewView {
+      padding-bottom: 30px;
+    }
+
+    .preview-toolbar {
+      width: min(980px, calc(100% - 24px));
+      margin: 14px auto;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+    }
+
+    .paper-wrap {
+      overflow-x: auto;
+      padding: 8px 12px 28px;
+    }
+
+    .report-paper {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      background: #fff;
+      color: #000;
+      padding: 7mm 6mm;
+      box-shadow: 0 8px 30px rgba(0,0,0,.18);
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    .report-title {
+      border: 1.3px solid #000;
+      background: #e7e7e7;
+      min-height: 12mm;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16pt;
+      margin: 0 3mm 5mm;
+    }
+
+    .report-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 9.6pt;
+    }
+
+    .report-table col:first-child { width: 34%; }
+    .report-table col:last-child { width: 66%; }
+
+    .report-table td {
+      border: 1.2px solid #000;
+      vertical-align: middle;
+      padding: 2.2mm 2.2mm;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      line-height: 1.18;
+    }
+
+    .report-table td.label {
+      font-weight: 700;
+    }
+
+    .r-short td { min-height: 9mm; height: 9mm; }
+    .r-nature td { min-height: 12mm; height: 12mm; }
+    .r-team td { min-height: 24mm; height: 24mm; vertical-align: top; }
+    .r-flow td { min-height: 59mm; height: 59mm; vertical-align: top; }
+    .r-medium td { min-height: 25mm; height: 25mm; vertical-align: top; }
+    .r-dsi td { min-height: 18mm; height: 18mm; vertical-align: top; }
+    .r-comments td { min-height: 28mm; height: 28mm; vertical-align: top; }
+
+    .report-value.empty::after {
+      content: "\00a0";
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+
+      .reserviste-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .reserviste-actions {
+        grid-column: 1 / -1;
+        flex-direction: row;
+      }
+
+      .reserviste-actions .btn {
+        flex: 1;
+      }
+
+      .reserviste-status {
+        grid-column: 1 / -1;
+      }
+
+      .reserviste-toolbar {
+        flex-direction: column;
+      }
+
+      .reserviste-toolbar .btn {
+        width: 100%;
+      }
+
+      .deroulement-editor,
+      .deroulement-item-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .deroulement-editor .detail-wrap,
+      .deroulement-editor .add-wrap,
+      .deroulement-item-grid .detail-wrap,
+      .deroulement-item-grid .remove-wrap {
+        grid-column: 1 / -1;
+      }
+
+      .deroulement-editor .add-wrap .btn,
+      .deroulement-item-grid .remove-wrap .btn {
+        width: 100%;
+      }
+
+      .deroulement-item-actions {
+        grid-column: 1 / -1;
+        flex-direction: row;
+      }
+
+      .deroulement-item-actions .btn {
+        flex: 1;
+      }
+
+      .deroulement-summary {
+        align-items: flex-start;
+      }
+
+      .deroulement-summary-main {
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .deroulement-summary-time {
+        min-width: auto;
+      }
+
+      .deroulement-list-heading {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .deroulement-list-heading small {
+        text-align: left;
+      }
+
+      .container { width: min(100% - 16px, 980px); }
+      .card { padding: 15px; border-radius: 12px; }
+
+      .section-menu-wrap {
+        top: 68px;
+        margin-left: -2px;
+        margin-right: -2px;
+      }
+
+      .section-menu button {
+        padding: 9px 12px;
+        font-size: .84rem;
+      }
+
+      .paper-wrap {
+        transform-origin: top left;
+      }
+
+      .report-paper {
+        margin-left: 0;
+      }
+    }
+
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      html, body {
+        width: 210mm;
+        min-height: 297mm;
+        background: #fff;
+      }
+
+      body * {
+        visibility: hidden !important;
+      }
+
+      #previewView,
+      #previewView .report-paper,
+      #previewView .report-paper * {
+        visibility: visible !important;
+      }
+
+      #previewView {
+        position: absolute;
+        inset: 0;
+        margin: 0;
+        padding: 0;
+      }
+
+      .preview-toolbar {
+        display: none !important;
+      }
+
+      /*
+       * Sur téléphone, l'aperçu est réduit avec transform: scale(...).
+       * Ces règles annulent impérativement cette réduction au moment de
+       * l'impression afin que le document occupe une vraie page A4.
+       */
+      .paper-wrap {
+        width: 210mm !important;
+        height: auto !important;
+        min-height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+        transform: none !important;
+      }
+
+      .report-paper {
+        width: 210mm !important;
+        min-width: 210mm !important;
+        max-width: 210mm !important;
+        min-height: 297mm !important;
+        margin: 0 !important;
+        padding: 7mm 6mm !important;
+        box-shadow: none !important;
+        transform: none !important;
+        transform-origin: initial !important;
+        zoom: 1 !important;
+        page-break-after: avoid;
+        break-after: avoid-page;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <section id="formView">
+    <header class="app-header">
+      <h1>COMPTE RENDU DE MISSION</h1>
+    </header>
+
+    <main class="container">
+      <nav class="section-menu-wrap" aria-label="Rubriques du compte rendu">
+        <div class="section-menu" id="sectionMenu">
+          <button type="button" class="active" data-target="mission">Mission</button>
+          <button type="button" data-target="deroulement">Déroulement</button>
+          <button type="button" data-target="controles">Contrôles et infractions</button>
+          <button type="button" data-target="commentaires">Commentaires</button>
+          <button type="button" class="menu-generate" id="menuGenerateBtn">Générer</button>
+          <button type="button" class="menu-new-report" id="clearBtn">Nouveau compte rendu</button>
+        </div>
+      </nav>
+
+      <section class="card form-section active" data-section="mission">
+        <h2>Informations générales</h2>
+        <div class="grid">
+          <div class="field full">
+            <label for="redacteur">Grade et nom du rédacteur</label>
+            <input id="redacteur" autocomplete="name" placeholder="Ex. MDC Marc DUPONT" />
+          </div>
+
+          <div class="field">
+            <label for="dateMission">Date</label>
+            <input id="dateMission" type="date" />
+          </div>
+
+          <div class="field">
+            <label>Horaires</label>
+            <div class="grid" style="gap:8px;">
+              <input id="heureDebut" type="time" aria-label="Heure de début" />
+              <input id="heureFin" type="time" aria-label="Heure de fin" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="uniteRenforcee">Unité renforcée</label>
+            <input
+              id="uniteRenforcee"
+              list="cobAlpesMaritimes"
+              placeholder="Écrire une COB ou une brigade…"
+              autocomplete="off"
+            />
+            <datalist id="cobAlpesMaritimes">
+              <option value="COB Mandelieu-la-Napoule"></option>
+              <option value="COB Peymeinade"></option>
+              <option value="COB Roquefort-les-Pins"></option>
+              <option value="COB Carros"></option>
+              <option value="COB Levens"></option>
+              <option value="COB La Trinité"></option>
+              <option value="COB Cap-d’Ail"></option>
+              <option value="COB Menton"></option>
+              <option value="COB Breil-sur-Roya"></option>
+              <option value="COB Saint-Martin-Vésubie" label="COB ST MARTIN VESUBIE"></option>
+              <option value="COB Saint-Étienne-de-Tinée" label="COB ST ETIENNE DE TINEE"></option>
+              <option value="COB Guillaumes"></option>
+            </datalist>
+            <p class="hint">Le champ reste libre : tu peux aussi saisir une brigade qui n’est pas dans la liste.</p>
+          </div>
+
+          <div class="field">
+            <label for="lieuConvocation">Lieu de convocation</label>
+            <input
+              id="lieuConvocation"
+              list="brigadesAlpesMaritimes"
+              placeholder="Écrire une brigade ou un lieu…"
+              autocomplete="off"
+            />
+            <datalist id="brigadesAlpesMaritimes">
+              <option value="Caserne Ausseur"></option>
+              <option value="Brigade de Beaulieu-sur-Mer"></option>
+              <option value="Brigade de Breil-sur-Roya"></option>
+              <option value="Brigade de Cap-d’Ail"></option>
+              <option value="Brigade de Carros"></option>
+              <option value="Brigade de Contes"></option>
+              <option value="Brigade de Èze"></option>
+              <option value="Brigade de Guillaumes"></option>
+              <option value="Brigade de L’Escarène"></option>
+              <option value="Brigade de Lantosque"></option>
+              <option value="Brigade de La Trinité"></option>
+              <option value="Brigade de La Turbie"></option>
+              <option value="Brigade de Le Bar-sur-Loup"></option>
+              <option value="Brigade de Levens"></option>
+              <option value="Brigade de Mandelieu-la-Napoule"></option>
+              <option value="Brigade de Menton"></option>
+              <option value="Brigade de Mouans-Sartoux"></option>
+              <option value="Brigade de Mougins"></option>
+              <option value="Brigade de Pégomas"></option>
+              <option value="Brigade de Péone"></option>
+              <option value="Brigade de Peymeinade"></option>
+              <option value="Brigade de Puget-Théniers"></option>
+              <option value="Brigade de Roquefort-les-Pins"></option>
+              <option value="Brigade de Roquestéron"></option>
+              <option value="Brigade de Saint-André-de-la-Roche"></option>
+              <option value="Brigade de Saint-Étienne-de-Tinée"></option>
+              <option value="Brigade de Saint-Martin-du-Var"></option>
+              <option value="Brigade de Saint-Martin-Vésubie"></option>
+              <option value="Brigade de Saint-Sauveur-sur-Tinée"></option>
+              <option value="Brigade de Saint-Vallier-de-Thiey"></option>
+              <option value="Brigade de Séranon"></option>
+              <option value="Brigade de Sospel"></option>
+              <option value="Brigade de Tende"></option>
+              <option value="Brigade de Théoule-sur-Mer"></option>
+              <option value="Brigade de Valbonne"></option>
+              <option value="Brigade de Vence"></option>
+              <option value="Brigade de Villeneuve-Loubet"></option>
+            </datalist>
+            <p class="hint">Le champ reste libre : tu peux sélectionner une brigade proposée ou saisir un autre lieu.</p>
+          </div>
+
+          <div class="field full">
+            <label for="natureMission">Nature de la mission</label>
+            <input id="natureMission" list="missions" placeholder="DSI, transfèrement, service d’ordre…" />
+            <datalist id="missions">
+              <option value="DSI"></option>
+              <option value="Transfèrement"></option>
+              <option value="Service d’ordre"></option>
+              <option value="Renfort unité"></option>
+              <option value="Sécurisation"></option>
+            </datalist>
+          </div>
+        </div>
+        <h3 class="mission-subtitle">Réservistes engagés</h3>
+        <div id="reservistesList"></div>
+
+        <div class="reserviste-toolbar">
+          <button type="button" class="btn btn-outline" id="addReserviste">
+            + Ajouter un réserviste
+          </button>
+
+          <button type="button" class="btn btn-primary" id="importEsrBtn">
+            Importer ESR
+          </button>
+
+          <input
+            type="file"
+            id="esrFileInput"
+            accept=".pdf,application/pdf"
+            hidden
+          />
+        </div>
+
+        <div class="esr-import-status" id="esrImportStatus"></div>
+
+        <p class="hint">L’import ESR lit le planning PDF selon la date, le site et les horaires. Le NIGEND est la clé principale pour retrouver et mettre à jour un réserviste déjà mémorisé.</p>
+      </section>
+
+      <section class="card form-section" data-section="deroulement">
+        <h2>Déroulement de la mission</h2>
+        <div class="grid">
+          <div class="field full">
+            <label>Déroulement de la mission — faits marquants</label>
+
+            <div class="deroulement-editor">
+              <div>
+                <label for="deroulementHeure">Heure</label>
+                <input id="deroulementHeure" type="time" />
+              </div>
+
+              <div>
+                <label for="deroulementType">Événement</label>
+                <select id="deroulementType">
+                  <option value="">Choisir un événement…</option>
+                  <option>Début de mission</option>
+                  <option>Fin de mission</option>
+                  <option>Départ en patrouille</option>
+                  <option>Fin de patrouille</option>
+                  <option>Prise en compte armement et matériels</option>
+                  <option>Restitution armement et matériels</option>
+                  <option>Contrôle routier</option>
+                  <option>Patrouille pédestre</option>
+                  <option>Contrôle de personnes</option>
+                  <option>Contrôle de véhicules</option>
+                  <option>Début d'intervention</option>
+                  <option>Fin d'intervention</option>
+                  <option>Départ de la caserne Ausseur-Début de service</option>
+                  <option>Arrivé à la caserne Ausseur-Fin de service</option>
+                </select>
+              </div>
+
+              <div class="detail-wrap">
+                <label for="deroulementTexte">Texte libre / précision</label>
+                <textarea id="deroulementTexte" rows="2" placeholder="Ex. Départ de la caserne Ausseur, contrôle secteur gare…"></textarea>
+              </div>
+
+              <div class="add-wrap">
+                <button type="button" class="btn btn-primary" id="addDeroulement">Valider et ajouter</button>
+              </div>
+            </div>
+
+            <div class="deroulement-list-heading">
+              <span>Événements enregistrés</span>
+              <small>Appuie sur « Rappeler » pour rouvrir une vignette.</small>
+            </div>
+            <div id="deroulementList"></div>
+            <p class="hint">Après validation, la vignette se replie et sa ligne est ajoutée au déroulement final. L’ensemble reste classé chronologiquement, y compris après minuit.</p>
+
+            <div class="deroulement-live">
+              <div class="deroulement-live-title">Déroulement final utilisé dans le compte rendu</div>
+              <textarea
+                class="deroulement-live-text"
+                id="deroulementFinalText"
+                rows="9"
+                placeholder="Les lignes créées avec les vignettes apparaîtront ici. Tu peux ensuite modifier librement ce texte."
+              ></textarea>
+              <div class="deroulement-final-actions">
+                <span id="deroulementFinalStatus">Synchronisé avec les vignettes</span>
+                <button type="button" class="btn btn-outline btn-small" id="rebuildDeroulementBtn">
+                  Recomposer depuis les vignettes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card form-section" data-section="controles">
+        <h2>Contrôles et infractions</h2>
+        <div class="grid">
+          <div class="field full">
+            <label for="infractionsRoute">Nombre et détail des infractions au code de la route relevées par les réservistes</label>
+            <textarea id="infractionsRoute" placeholder="Indiquer « Néant » si aucune infraction n’a été relevée."></textarea>
+          </div>
+
+          <div class="field full">
+            <label for="autresInfractions">Autres infractions relevées</label>
+            <textarea id="autresInfractions" placeholder="Préciser notamment si un rapport d’infraction ou un PV d’interpellation et de mise à disposition a été établi."></textarea>
+          </div>
+        </div>
+        <h3 class="mission-subtitle">Contrôles DSI</h3>
+        <div class="grid">
+          <div class="field">
+            <label for="vehiculesControles">Nombre de véhicules contrôlés</label>
+            <input id="vehiculesControles" type="number" min="0" inputmode="numeric" placeholder="0" />
+          </div>
+
+          <div class="field">
+            <label for="personnesControlees">Nombre de personnes contrôlées</label>
+            <input id="personnesControlees" type="number" min="0" inputmode="numeric" placeholder="0" />
+          </div>
+
+
+        </div>
+      </section>
+
+      <section class="card form-section" data-section="commentaires">
+        <h2>Commentaires</h2>
+        <div class="grid">
+          <div class="field full">
+            <label for="commentaires">Commentaires</label>
+            <textarea id="commentaires" placeholder="Qualité de l’accueil, difficultés rencontrées, suggestions…"></textarea>
+          </div>
+        </div>
+      </section>
+
+      <div class="status" id="status"></div>
+    </main>
+
+    <div class="esr-modal hidden" id="esrMissionModal" role="dialog" aria-modal="true" aria-labelledby="esrModalTitle">
+      <div class="esr-modal-card">
+        <div class="esr-modal-header">
+          <div>
+            <h2 id="esrModalTitle">Choisir le service à importer</h2>
+            <p id="esrModalMessage"></p>
+          </div>
+          <button type="button" class="esr-modal-close" id="closeEsrModalBtn" aria-label="Fermer">×</button>
+        </div>
+        <div class="esr-mission-choices" id="esrMissionChoices"></div>
+      </div>
+    </div>
+  </section>
+
+  <section id="previewView" class="hidden">
+    <div class="preview-toolbar">
+      <button type="button" class="btn btn-secondary" id="backBtn">← Modifier</button>
+      <button type="button" class="btn btn-primary" id="printBtn">Imprimer / Enregistrer en PDF</button>
+    </div>
+
+    <div class="paper-wrap">
+      <article class="report-paper" aria-label="Compte rendu de mission généré">
+        <div class="report-title">COMPTE RENDU DE MISSION</div>
+
+        <table class="report-table">
+          <colgroup><col /><col /></colgroup>
+          <tbody>
+            <tr class="r-short">
+              <td class="label">Grade et nom du rédacteur :</td>
+              <td id="outRedacteur" class="report-value empty"></td>
+            </tr>
+            <tr class="r-short">
+              <td class="label">Date :</td>
+              <td id="outDate" class="report-value empty"></td>
+            </tr>
+            <tr class="r-short">
+              <td class="label">Horaires :</td>
+              <td id="outHoraires" class="report-value empty"></td>
+            </tr>
+            <tr class="r-short">
+              <td class="label">Unité renforcée :</td>
+              <td id="outUnite" class="report-value empty"></td>
+            </tr>
+            <tr class="r-short">
+              <td class="label">Lieu de convocation :</td>
+              <td id="outLieu" class="report-value empty"></td>
+            </tr>
+            <tr class="r-nature">
+              <td class="label">Nature de la mission (DSI, transfèrement, service d’ordre, etc…) :</td>
+              <td id="outNature" class="report-value empty"></td>
+            </tr>
+            <tr class="r-team">
+              <td class="label">Grades, nom, qualification et unité d’affectation des réservistes engagés :</td>
+              <td id="outReservistes" class="report-value empty"></td>
+            </tr>
+            <tr class="r-flow">
+              <td class="label">Déroulement de la mission (Détailler les faits marquants) :</td>
+              <td id="outDeroulement" class="report-value empty"></td>
+            </tr>
+            <tr class="r-medium">
+              <td class="label">Nombre et détail des infractions au code de la route relevées par les réservistes :</td>
+              <td id="outRoute" class="report-value empty"></td>
+            </tr>
+            <tr class="r-medium">
+              <td class="label">Autres infractions relevées (Préciser si un rapport d’infraction ou un PV d’interpellation et de mise à disposition a été établi par les réservistes) :</td>
+              <td id="outAutres" class="report-value empty"></td>
+            </tr>
+            <tr class="r-dsi">
+              <td class="label">Pour les services de types DSI (réservistes autonomes), nombre de véhicules et de personnes contrôlés :</td>
+              <td id="outDsi" class="report-value empty"></td>
+            </tr>
+            <tr class="r-comments">
+              <td class="label">Commentaires (Qualité de l’accueil, difficultés rencontrées, suggestions, etc...) :</td>
+              <td id="outCommentaires" class="report-value empty"></td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+    </div>
+  </section>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const STORAGE_KEY = "crMissionUniteRenforcee_v1";
+      const KNOWN_RESERVISTES_KEY = "crMissionReservistesConnus_v1";
+      const formView = document.getElementById("formView");
+      const previewView = document.getElementById("previewView");
+      const reservistesList = document.getElementById("reservistesList");
+      const deroulementList = document.getElementById("deroulementList");
+      const status = document.getElementById("status");
+      const sectionMenu = document.getElementById("sectionMenu");
+      const importEsrBtn = document.getElementById("importEsrBtn");
+      const esrFileInput = document.getElementById("esrFileInput");
+      const esrImportStatus = document.getElementById("esrImportStatus");
+      const esrMissionModal = document.getElementById("esrMissionModal");
+      const esrMissionChoices = document.getElementById("esrMissionChoices");
+      const esrModalMessage = document.getElementById("esrModalMessage");
+      const sectionOrder = ["mission", "deroulement", "controles", "commentaires"];
+      let currentSection = "mission";
+      let deroulementFinalEdited = false;
+      let pdfJsModulePromise = null;
+      let parsedEsrMissions = [];
+
+      const fieldIds = [
+        "redacteur", "dateMission", "heureDebut", "heureFin",
+        "uniteRenforcee", "lieuConvocation", "natureMission",
+        "infractionsRoute", "autresInfractions",
+        "vehiculesControles", "personnesControlees", "commentaires"
+      ];
+
+      const el = id => document.getElementById(id);
+      const value = id => (el(id).value || "").trim();
+
+      function showSection(sectionName, scroll = true) {
+        if (!sectionOrder.includes(sectionName)) sectionName = "mission";
+        currentSection = sectionName;
+
+        document.querySelectorAll(".form-section").forEach(section => {
+          section.classList.toggle("active", section.dataset.section === sectionName);
+        });
+
+        sectionMenu.querySelectorAll("button[data-target]").forEach(button => {
+          const active = button.dataset.target === sectionName;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-current", active ? "step" : "false");
+          if (active) {
+            button.scrollIntoView({
+              behavior: "smooth",
+              block: "nearest",
+              inline: "center"
+            });
+          }
+        });
+
+        if (scroll) {
+          const menu = document.querySelector(".section-menu-wrap");
+          const top = menu.getBoundingClientRect().top + window.scrollY;
+          window.scrollTo({ top: Math.max(0, top - 6), behavior: "smooth" });
+        }
+
+
+        localStorage.setItem(STORAGE_KEY + "_section", sectionName);
+      }
+
+      function normalizeSearch(text) {
+        return String(text || "")
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toUpperCase()
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function readKnownReservistes() {
+        try {
+          const raw = localStorage.getItem(KNOWN_RESERVISTES_KEY);
+          const data = raw ? JSON.parse(raw) : [];
+          return Array.isArray(data) ? data : [];
+        } catch (error) {
+          console.error("Impossible de lire les réservistes mémorisés :", error);
+          return [];
+        }
+      }
+
+      function writeKnownReservistes(reservistes) {
+        localStorage.setItem(
+          KNOWN_RESERVISTES_KEY,
+          JSON.stringify(reservistes)
+        );
+      }
+
+      function normalizeReserviste(data = {}) {
+        return {
+          grade: String(data.grade || "").trim(),
+          nom: String(data.nom || "").trim(),
+          nigend: String(data.nigend || "").trim(),
+          qualification: String(data.qualification || "").trim(),
+          unite: String(data.unite || "").trim()
+        };
+      }
+
+
+      const CRT_OPTIONS = [
+        "06/1 Nice",
+        "06/2 Nice",
+        "06/3 Nice",
+        "06/4 Nice",
+        "06/5 Nice",
+        "06/6 Nice"
+      ];
+
+      function crtOptions(selected = "") {
+        const current = String(selected || "").trim();
+        const options = [
+          `<option value=""${current ? "" : " selected"}>CRT</option>`
+        ];
+
+        // Compatibilité avec une ancienne valeur mémorisée qui ne serait pas
+        // encore présente dans la liste officielle proposée.
+        if (current && !CRT_OPTIONS.includes(current)) {
+          options.push(
+            `<option value="${escapeAttr(current)}" selected>${escapeHtml(current)}</option>`
+          );
+        }
+
+        CRT_OPTIONS.forEach(crt => {
+          const isSelected = crt === current ? " selected" : "";
+          options.push(
+            `<option value="${escapeAttr(crt)}"${isSelected}>${escapeHtml(crt)}</option>`
+          );
+        });
+
+        return options.join("");
+      }
+
+      function setCrtValue(select, value) {
+        const wanted = String(value || "").trim();
+
+        if (wanted && ![...select.options].some(option => option.value === wanted)) {
+          const option = document.createElement("option");
+          option.value = wanted;
+          option.textContent = wanted;
+          select.appendChild(option);
+        }
+
+        select.value = wanted;
+      }
+
+      function readReserviste(wrapper) {
+        return normalizeReserviste({
+          grade: wrapper.querySelector(".r-grade").value,
+          nom: wrapper.querySelector(".r-nom").value,
+          nigend: wrapper.querySelector(".r-nigend").value,
+          qualification: wrapper.querySelector(".r-qualification").value,
+          unite: wrapper.querySelector(".r-unite").value
+        });
+      }
+
+      function reservisteMemoryKey(reserviste) {
+        const nigend = normalizeSearch(reserviste.nigend);
+        if (nigend) return `NIGEND:${nigend}`;
+        return `NOM:${normalizeSearch(reserviste.nom)}`;
+      }
+
+      function saveKnownReserviste(reserviste) {
+        const profile = normalizeReserviste(reserviste);
+        if (!profile.nom && !profile.nigend) return false;
+
+        const known = readKnownReservistes();
+        const wantedNigend = normalizeSearch(profile.nigend);
+        const wantedName = normalizeSearch(profile.nom);
+
+        let existingIndex = -1;
+
+        // Le NIGEND est toujours prioritaire. Deux personnes portant le même
+        // nom mais ayant des NIGEND différents ne seront jamais fusionnées.
+        if (wantedNigend) {
+          existingIndex = known.findIndex(item =>
+            normalizeSearch(item.nigend) === wantedNigend
+          );
+
+          // Compatibilité avec une ancienne fiche qui n’avait pas encore de NIGEND.
+          if (existingIndex < 0 && wantedName) {
+            existingIndex = known.findIndex(item =>
+              !normalizeSearch(item.nigend) &&
+              normalizeSearch(item.nom) === wantedName
+            );
+          }
+        } else if (wantedName) {
+          existingIndex = known.findIndex(item =>
+            normalizeSearch(item.nom) === wantedName
+          );
+        }
+
+        const savedProfile = {
+          ...profile,
+          updatedAt: Date.now()
+        };
+
+        if (existingIndex >= 0) {
+          known[existingIndex] = savedProfile;
+        } else {
+          known.push(savedProfile);
+        }
+
+        known.sort((a, b) =>
+          normalizeSearch(a.nom).localeCompare(normalizeSearch(b.nom), "fr")
+        );
+
+        writeKnownReservistes(known);
+        return true;
+      }
+
+      function closeReservisteSuggestions(except = null) {
+        document.querySelectorAll(".reserviste-autocomplete").forEach(list => {
+          if (list !== except) {
+            list.classList.add("hidden");
+            list.replaceChildren();
+          }
+        });
+      }
+
+      function applyKnownReserviste(wrapper, profile) {
+        const reserviste = normalizeReserviste(profile);
+
+        wrapper.querySelector(".r-grade").value = reserviste.grade;
+        wrapper.querySelector(".r-nom").value = reserviste.nom;
+        wrapper.querySelector(".r-nigend").value = reserviste.nigend;
+        wrapper.querySelector(".r-qualification").value = reserviste.qualification;
+        setCrtValue(wrapper.querySelector(".r-unite"), reserviste.unite);
+
+        wrapper.classList.remove("validated");
+        wrapper.querySelector(".reserviste-status").textContent =
+          "Fiche retrouvée : vérifie les renseignements puis appuie sur « Valider ».";
+
+        closeReservisteSuggestions();
+        autoSave();
+      }
+
+      function showReservisteSuggestions(wrapper, input, list, mode) {
+        const term = normalizeSearch(input.value);
+        const known = readKnownReservistes();
+
+        if (!term || !known.length) {
+          list.classList.add("hidden");
+          list.replaceChildren();
+          return;
+        }
+
+        const matches = known
+          .map(normalizeReserviste)
+          .filter(profile => {
+            const name = normalizeSearch(profile.nom);
+            const nigend = normalizeSearch(profile.nigend);
+
+            if (mode === "nom") {
+              return name.includes(term) || nigend.includes(term);
+            }
+
+            return nigend.includes(term) || name.includes(term);
+          })
+          .sort((a, b) => {
+            const aPrimary = mode === "nom"
+              ? normalizeSearch(a.nom)
+              : normalizeSearch(a.nigend);
+            const bPrimary = mode === "nom"
+              ? normalizeSearch(b.nom)
+              : normalizeSearch(b.nigend);
+
+            const aStarts = aPrimary.startsWith(term) ? 0 : 1;
+            const bStarts = bPrimary.startsWith(term) ? 0 : 1;
+            return aStarts - bStarts ||
+              normalizeSearch(a.nom).localeCompare(normalizeSearch(b.nom), "fr");
+          })
+          .slice(0, 8);
+
+        list.replaceChildren();
+
+        if (!matches.length) {
+          list.classList.add("hidden");
+          return;
+        }
+
+        matches.forEach(profile => {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "reserviste-suggestion";
+
+          const title = document.createElement("strong");
+          title.textContent = [profile.grade, profile.nom]
+            .filter(Boolean)
+            .join(" ") || "Réserviste";
+
+          const details = document.createElement("small");
+          details.textContent = [
+            profile.nigend ? `NIGEND ${profile.nigend}` : "",
+            profile.qualification,
+            profile.unite
+          ].filter(Boolean).join(" — ");
+
+          button.append(title, details);
+          button.addEventListener("pointerdown", event => {
+            event.preventDefault();
+            applyKnownReserviste(wrapper, profile);
+          });
+
+          list.appendChild(button);
+        });
+
+        closeReservisteSuggestions(list);
+        list.classList.remove("hidden");
+      }
+
+      function setupReservisteAutocomplete(wrapper, input, list, mode) {
+        input.addEventListener("input", () => {
+          wrapper.classList.remove("validated");
+          wrapper.querySelector(".reserviste-status").textContent = "";
+          showReservisteSuggestions(wrapper, input, list, mode);
+          autoSave();
+        });
+
+        input.addEventListener("focus", () => {
+          if (input.value.trim()) {
+            showReservisteSuggestions(wrapper, input, list, mode);
+          }
+        });
+
+        input.addEventListener("keydown", event => {
+          if (event.key === "Escape") {
+            list.classList.add("hidden");
+            list.replaceChildren();
+          }
+        });
+      }
+
+      function setEsrImportStatus(message = "", type = "") {
+        esrImportStatus.textContent = message;
+        esrImportStatus.classList.toggle("error", type === "error");
+        esrImportStatus.classList.toggle("success", type === "success");
+      }
+
+
+      async function loadPdfJsModule() {
+        if (!pdfJsModulePromise) {
+          pdfJsModulePromise = import("./pdf.min.mjs").then(module => {
+            module.GlobalWorkerOptions.workerSrc = "./pdf.worker.min.mjs";
+            return module;
+          });
+        }
+
+        return pdfJsModulePromise;
+      }
+
+      async function extractPdfLines(file) {
+        const pdfjs = await loadPdfJsModule();
+        const data = new Uint8Array(await file.arrayBuffer());
+        const loadingTask = pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        const lines = [];
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+          const page = await pdf.getPage(pageNumber);
+          const textContent = await page.getTextContent();
+
+          const items = textContent.items
+            .filter(item => item.str && item.str.trim())
+            .map(item => ({
+              text: item.str.trim(),
+              x: item.transform[4],
+              y: item.transform[5],
+              width: Number(item.width) || 0
+            }))
+            .sort((a, b) => {
+              if (Math.abs(b.y - a.y) > 2.2) return b.y - a.y;
+              return a.x - b.x;
+            });
+
+          const groups = [];
+
+          items.forEach(item => {
+            let group = groups.find(candidate =>
+              Math.abs(candidate.y - item.y) <= 2.2
+            );
+
+            if (!group) {
+              group = { y: item.y, items: [] };
+              groups.push(group);
+            }
+
+            group.items.push(item);
+          });
+
+          groups
+            .sort((a, b) => b.y - a.y)
+            .forEach(group => {
+              group.items.sort((a, b) => a.x - b.x);
+
+              let line = "";
+              let previousEnd = null;
+
+              group.items.forEach(item => {
+                if (previousEnd !== null) {
+                  const gap = item.x - previousEnd;
+                  if (gap > 18) line += "   ";
+                  else if (gap > 2.2) line += " ";
+                }
+
+                line += item.text;
+                previousEnd = item.x + item.width;
+              });
+
+              if (line.trim()) lines.push(line.trim());
+            });
+        }
+
+        return lines;
+      }
+
+      function normalizeEsrText(text) {
+        return String(text || "")
+          .replace(/[–—−]/g, "-")
+          .replace(/\s+/g, " ")
+          .trim();
+      }
+
+      function isLikelySiteHeading(line) {
+        const normalized = normalizeSearch(line);
+
+        if (!normalized || normalized.length > 90) return false;
+        if (/\d{2}\/\d{2}\/\d{4}/.test(line)) return false;
+        if (/DATE|HORAIRE|EFFECTIF|OBSERVATION|MOIS/.test(normalized)) return false;
+
+        return /\b(COB|BTA|BRIGADE|DSI|PAF|PELOTON|POSTE|UNITÉ|UNITE)\b/.test(normalized);
+      }
+
+      function findSiteBeforeLine(lines, index) {
+        for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+          if (isLikelySiteHeading(lines[cursor])) {
+            return normalizeEsrText(lines[cursor]);
+          }
+        }
+
+        return "";
+      }
+
+      function parseEsrTime(blockText) {
+        const match = normalizeEsrText(blockText).match(
+          /\b(\d{1,2})\s*[hH:]\s*(\d{2})\s*-{1,3}\s*(\d{1,2})\s*[hH:]\s*(\d{2})\b/
+        );
+
+        if (!match) return { start: "", end: "" };
+
+        return {
+          start: `${String(match[1]).padStart(2, "0")}:${match[2]}`,
+          end: `${String(match[3]).padStart(2, "0")}:${match[4]}`
+        };
+      }
+
+      function parseEsrPersonnel(blockText) {
+        const gradePattern = [
+          "GCA", "GDI", "GBR", "COL", "LCL", "CEN", "CDT", "CNE",
+          "LTN", "SLT", "ASP", "MAJ", "ADC", "ADJ", "MCH", "MDC",
+          "MDL", "GND", "BRC", "BRI", "GAV", "ELG", "EG", "SOG"
+        ].join("|");
+
+        const pattern = new RegExp(
+          `\\b(\\d{6})\\s*(${gradePattern})\\s*([A-Za-zÀ-ÖØ-öø-ÿŒœÆæ'’\\- ]+?)\\s+(0\\d{9})\\b`,
+          "giu"
+        );
+
+        const personnel = [];
+        let match;
+
+        while ((match = pattern.exec(blockText)) !== null) {
+          const person = {
+            nigend: match[1],
+            grade: match[2].toUpperCase(),
+            nom: normalizeEsrText(match[3]),
+            telephone: match[4]
+          };
+
+          const duplicate = personnel.some(existing =>
+            existing.nigend === person.nigend
+          );
+
+          if (!duplicate) personnel.push(person);
+        }
+
+        return personnel;
+      }
+
+      function parseEsrMissions(lines) {
+        const dateIndexes = [];
+
+        lines.forEach((line, index) => {
+          const dateMatch = line.match(/\b(\d{2}\/\d{2}\/\d{4})\b/);
+          if (dateMatch) {
+            dateIndexes.push({
+              index,
+              date: dateMatch[1]
+            });
+          }
+        });
+
+        const missions = [];
+
+        dateIndexes.forEach((entry, position) => {
+          const nextIndex = position + 1 < dateIndexes.length
+            ? dateIndexes[position + 1].index
+            : lines.length;
+
+          const blockLines = lines.slice(entry.index, nextIndex);
+          const blockText = normalizeEsrText(blockLines.join(" "));
+          const times = parseEsrTime(blockText);
+          const personnel = parseEsrPersonnel(blockText);
+          const codeMatch = blockText.match(/\bcode\s+mission\s+(\d{6,8})\b/i);
+
+          if (!personnel.length) return;
+
+          missions.push({
+            date: entry.date,
+            start: times.start,
+            end: times.end,
+            site: findSiteBeforeLine(lines, entry.index),
+            codeMission: codeMatch ? codeMatch[1] : "",
+            personnel
+          });
+        });
+
+        return missions;
+      }
+
+      function inputDateToFrench(dateValue) {
+        if (!dateValue) return "";
+        const parts = dateValue.split("-");
+        if (parts.length !== 3) return dateValue;
+        return `${parts[2]}/${parts[1]}/${parts[0]}`;
+      }
+
+      function frenchDateToInput(dateValue) {
+        if (!dateValue) return "";
+        const parts = dateValue.split("/");
+        if (parts.length !== 3) return "";
+        return `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+
+      function significantSiteTokens(text) {
+        const ignored = new Set([
+          "COB", "BTA", "BRIGADE", "RENFORT", "CIE", "COMPAGNIE",
+          "DE", "DU", "DES", "LA", "LE", "LES", "ST", "SAINT"
+        ]);
+
+        return normalizeSearch(text)
+          .split(/[^A-Z0-9]+/)
+          .filter(token => token.length >= 3 && !ignored.has(token));
+      }
+
+      function siteMatches(wantedSite, missionSite) {
+        const wantedTokens = significantSiteTokens(wantedSite);
+        if (!wantedTokens.length) return true;
+
+        const missionTokens = new Set(significantSiteTokens(missionSite));
+        return wantedTokens.some(token => missionTokens.has(token));
+      }
+
+      function scoreEsrMission(mission) {
+        const wantedDate = inputDateToFrench(value("dateMission"));
+        const wantedStart = value("heureDebut");
+        const wantedEnd = value("heureFin");
+        const wantedSite = value("uniteRenforcee");
+
+        let score = 0;
+
+        if (wantedDate) score += mission.date === wantedDate ? 40 : -20;
+        if (wantedStart) score += mission.start === wantedStart ? 25 : -10;
+        if (wantedEnd) score += mission.end === wantedEnd ? 25 : -10;
+        if (wantedSite) score += siteMatches(wantedSite, mission.site) ? 20 : -8;
+
+        return score;
+      }
+
+      function exactEsrMissionMatches(missions) {
+        const wantedDate = inputDateToFrench(value("dateMission"));
+        const wantedStart = value("heureDebut");
+        const wantedEnd = value("heureFin");
+        const wantedSite = value("uniteRenforcee");
+
+        return missions.filter(mission => {
+          if (wantedDate && mission.date !== wantedDate) return false;
+          if (wantedStart && mission.start !== wantedStart) return false;
+          if (wantedEnd && mission.end !== wantedEnd) return false;
+          if (wantedSite && !siteMatches(wantedSite, mission.site)) return false;
+          return true;
+        });
+      }
+
+      function findKnownReservisteForImport(person) {
+        const known = readKnownReservistes();
+        const wantedNigend = normalizeSearch(person.nigend);
+        const wantedName = normalizeSearch(person.nom);
+
+        if (wantedNigend) {
+          const byNigend = known.find(profile =>
+            normalizeSearch(profile.nigend) === wantedNigend
+          );
+
+          if (byNigend) return byNigend;
+
+          // Une ancienne fiche sans NIGEND peut être rattachée par le nom.
+          return known.find(profile =>
+            !normalizeSearch(profile.nigend) &&
+            wantedName &&
+            normalizeSearch(profile.nom) === wantedName
+          ) || null;
+        }
+
+        return known.find(profile =>
+          wantedName && normalizeSearch(profile.nom) === wantedName
+        ) || null;
+      }
+
+      function updateKnownReservisteFromEsr(person) {
+        const known = readKnownReservistes();
+        const wantedNigend = normalizeSearch(person.nigend);
+        const wantedName = normalizeSearch(person.nom);
+
+        let existingIndex = -1;
+
+        if (wantedNigend) {
+          existingIndex = known.findIndex(profile =>
+            normalizeSearch(profile.nigend) === wantedNigend
+          );
+
+          if (existingIndex < 0 && wantedName) {
+            existingIndex = known.findIndex(profile =>
+              !normalizeSearch(profile.nigend) &&
+              normalizeSearch(profile.nom) === wantedName
+            );
+          }
+        } else if (wantedName) {
+          existingIndex = known.findIndex(profile =>
+            normalizeSearch(profile.nom) === wantedName
+          );
+        }
+
+        const existing = existingIndex >= 0
+          ? normalizeReserviste(known[existingIndex])
+          : normalizeReserviste({});
+
+        const importedUnite = String(
+          person.unite || person.crt || person.CRT || ""
+        ).trim();
+
+        const merged = normalizeReserviste({
+          // Le grade du planning ESR devient la valeur à jour.
+          grade: person.grade || existing.grade,
+          nom: person.nom || existing.nom,
+          nigend: person.nigend || existing.nigend,
+          qualification: person.qualification || existing.qualification,
+          // Le CRT/unité est mis à jour si le fichier importé le contient.
+          // Sinon, celui déjà mémorisé est conservé.
+          unite: importedUnite || existing.unite
+        });
+
+        const changedFields = [];
+
+        if (existingIndex >= 0) {
+          if (merged.grade !== existing.grade) changedFields.push("grade");
+          if (merged.unite !== existing.unite) changedFields.push("CRT");
+          if (merged.nom !== existing.nom) changedFields.push("nom");
+          if (merged.nigend !== existing.nigend) changedFields.push("NIGEND");
+
+          known[existingIndex] = {
+            ...merged,
+            updatedAt: changedFields.length
+              ? Date.now()
+              : (known[existingIndex].updatedAt || Date.now())
+          };
+        } else {
+          known.push({
+            ...merged,
+            updatedAt: Date.now()
+          });
+          changedFields.push("nouvelle fiche");
+        }
+
+        known.sort((a, b) =>
+          normalizeSearch(a.nom).localeCompare(normalizeSearch(b.nom), "fr")
+        );
+
+        writeKnownReservistes(known);
+
+        return {
+          profile: merged,
+          changedFields
+        };
+      }
+
+      function closeEsrMissionModal() {
+        esrMissionModal.classList.add("hidden");
+        esrMissionChoices.replaceChildren();
+      }
+
+      function showEsrMissionModal(missions, message) {
+        parsedEsrMissions = missions;
+        esrModalMessage.textContent = message;
+        esrMissionChoices.replaceChildren();
+
+        missions
+          .map(mission => ({
+            mission,
+            score: scoreEsrMission(mission)
+          }))
+          .sort((a, b) => b.score - a.score)
+          .forEach(({ mission }) => {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "esr-mission-choice";
+
+            const title = document.createElement("strong");
+            title.textContent = `${mission.date} — ${mission.start || "?"} à ${mission.end || "?"}`;
+
+            const site = document.createElement("span");
+            site.textContent = mission.site || "Site non identifié dans le document";
+
+            const names = document.createElement("small");
+            names.textContent = mission.personnel
+              .map(person => `${person.grade} ${person.nom} — ${person.nigend}`)
+              .join(" | ");
+
+            button.append(title, site, names);
+            button.addEventListener("click", () => {
+              closeEsrMissionModal();
+              importSelectedEsrMission(mission);
+            });
+
+            esrMissionChoices.appendChild(button);
+          });
+
+        esrMissionModal.classList.remove("hidden");
+      }
+
+      function hasCurrentReservistes() {
+        return collectReservistes().some(reserviste =>
+          reserviste.nom ||
+          reserviste.nigend ||
+          reserviste.grade ||
+          reserviste.qualification ||
+          reserviste.unite
+        );
+      }
+
+      function importSelectedEsrMission(mission) {
+        if (hasCurrentReservistes()) {
+          const replace = confirm(
+            "Remplacer les réservistes actuellement saisis par ceux du service ESR sélectionné ?"
+          );
+
+          if (!replace) return;
+        }
+
+        reservistesList.innerHTML = "";
+
+        let updatedProfiles = 0;
+
+        mission.personnel.forEach(person => {
+          const result = updateKnownReservisteFromEsr(person);
+          const profile = result.profile;
+
+          if (result.changedFields.length) {
+            updatedProfiles += 1;
+          }
+
+          createReserviste({
+            ...profile,
+            imported: true,
+            validated: false
+          });
+        });
+
+        if (!mission.personnel.length) createReserviste();
+
+        el("dateMission").value = frenchDateToInput(mission.date);
+        if (mission.start) el("heureDebut").value = mission.start;
+        if (mission.end) el("heureFin").value = mission.end;
+        if (mission.site) el("uniteRenforcee").value = mission.site;
+
+        saveDraft(false);
+        setEsrImportStatus(
+          `${mission.personnel.length} réserviste(s) importé(s) pour le ${mission.date}, de ${mission.start || "?"} à ${mission.end || "?"}. ${updatedProfiles} fiche(s) connue(s) ajoutée(s) ou actualisée(s) par NIGEND.`,
+          "success"
+        );
+        showStatus("Import ESR terminé. Le grade et le CRT ont été actualisés lorsqu’ils étaient présents dans le fichier.");
+      }
+
+      async function handleEsrPdfImport(file) {
+        if (!file) return;
+
+        importEsrBtn.disabled = true;
+        importEsrBtn.textContent = "Lecture du PDF…";
+        setEsrImportStatus("Analyse du tableau ESR en cours…");
+
+        try {
+          const lines = await extractPdfLines(file);
+          const missions = parseEsrMissions(lines);
+
+          if (!missions.length) {
+            throw new Error(
+              "Aucun service avec date, horaires et réservistes n’a été reconnu dans ce PDF."
+            );
+          }
+
+          const exactMatches = exactEsrMissionMatches(missions);
+
+          if (exactMatches.length === 1) {
+            importSelectedEsrMission(exactMatches[0]);
+          } else if (exactMatches.length > 1) {
+            showEsrMissionModal(
+              exactMatches,
+              "Plusieurs services correspondent aux renseignements saisis. Choisis celui à importer."
+            );
+            setEsrImportStatus(
+              `${exactMatches.length} services correspondants ont été trouvés.`
+            );
+          } else if (missions.length === 1) {
+            importSelectedEsrMission(missions[0]);
+          } else {
+            showEsrMissionModal(
+              missions,
+              "Aucune correspondance exacte avec la date, le site et les horaires actuels. Choisis le service voulu."
+            );
+            setEsrImportStatus(
+              `${missions.length} services ont été détectés dans le PDF.`
+            );
+          }
+        } catch (error) {
+          console.error(error);
+
+          const missingLibrary = /pdf\.min\.mjs|Failed to fetch dynamically imported module/i
+            .test(String(error?.message || error));
+
+          setEsrImportStatus(
+            missingLibrary
+              ? "Le lecteur PDF local est absent. Ajoute pdf.min.mjs et pdf.worker.min.mjs à côté de index.html."
+              : `Import impossible : ${error?.message || "format ESR non reconnu"}`,
+            "error"
+          );
+        } finally {
+          importEsrBtn.disabled = false;
+          importEsrBtn.textContent = "Importer ESR";
+          esrFileInput.value = "";
+        }
+      }
+
+      function createReserviste(data = {}) {
+        const reserviste = normalizeReserviste(data);
+        const wrapper = document.createElement("div");
+        wrapper.className = "reserviste";
+
+        if (data.validated) {
+          wrapper.classList.add("validated");
+        }
+
+        wrapper.innerHTML = `
+          <div class="reserviste-grid">
+            <div>
+              <label>Grade</label>
+              <input
+                class="r-grade"
+                value="${escapeAttr(reserviste.grade)}"
+                placeholder="Ex. GND"
+                autocomplete="off"
+              />
+            </div>
+
+            <div class="reserviste-field">
+              <label>Nom et prénom</label>
+              <input
+                class="r-nom"
+                value="${escapeAttr(reserviste.nom)}"
+                placeholder="Saisir le nom…"
+                autocomplete="off"
+              />
+              <div class="reserviste-autocomplete hidden r-nom-suggestions"></div>
+            </div>
+
+            <div class="reserviste-field">
+              <label>NIGEND</label>
+              <input
+                class="r-nigend"
+                value="${escapeAttr(reserviste.nigend)}"
+                placeholder="NIGEND"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <div class="reserviste-autocomplete hidden r-nigend-suggestions"></div>
+            </div>
+
+            <div>
+              <label>Qualification</label>
+              <input
+                class="r-qualification"
+                value="${escapeAttr(reserviste.qualification)}"
+                placeholder="Ex. APJA"
+                autocomplete="off"
+              />
+            </div>
+
+            <div>
+              <label>CRT</label>
+              <select class="r-unite">
+                ${crtOptions(reserviste.unite)}
+              </select>
+            </div>
+
+            <div class="reserviste-actions">
+              <button type="button" class="btn btn-primary btn-small validate-reserviste">
+                Valider
+              </button>
+              <button type="button" class="btn btn-danger btn-small remove-reserviste">
+                Supprimer
+              </button>
+            </div>
+
+            <div class="reserviste-status">${
+              data.imported
+                ? "Importé depuis l’ESR : vérifie les renseignements puis appuie sur « Valider »."
+                : data.validated
+                  ? "Réserviste validé et mémorisé sur ce téléphone."
+                  : ""
+            }</div>
+          </div>
+        `;
+
+        const nameInput = wrapper.querySelector(".r-nom");
+        const nigendInput = wrapper.querySelector(".r-nigend");
+        const nameSuggestions = wrapper.querySelector(".r-nom-suggestions");
+        const nigendSuggestions = wrapper.querySelector(".r-nigend-suggestions");
+
+        setupReservisteAutocomplete(
+          wrapper,
+          nameInput,
+          nameSuggestions,
+          "nom"
+        );
+
+        setupReservisteAutocomplete(
+          wrapper,
+          nigendInput,
+          nigendSuggestions,
+          "nigend"
+        );
+
+        wrapper.querySelectorAll(
+          ".r-grade, .r-qualification, .r-unite"
+        ).forEach(field => {
+          const markAsModified = () => {
+            wrapper.classList.remove("validated");
+            wrapper.querySelector(".reserviste-status").textContent = "";
+            autoSave();
+          };
+
+          field.addEventListener("input", markAsModified);
+          field.addEventListener("change", markAsModified);
+        });
+
+        wrapper.querySelector(".validate-reserviste").addEventListener("click", () => {
+          const profile = readReserviste(wrapper);
+
+          if (!profile.nom && !profile.nigend) {
+            showStatus("Renseigne au moins le nom ou le NIGEND du réserviste.");
+            return;
+          }
+
+          saveKnownReserviste(profile);
+          wrapper.classList.add("validated");
+          wrapper.querySelector(".reserviste-status").textContent =
+            "Réserviste validé et mémorisé sur ce téléphone.";
+          closeReservisteSuggestions();
+          saveDraft(false);
+          showStatus("Réserviste validé. Sa fiche sera proposée lors des prochaines missions.");
+        });
+
+        wrapper.querySelector(".remove-reserviste").addEventListener("click", () => {
+          wrapper.remove();
+          closeReservisteSuggestions();
+
+          if (!reservistesList.querySelector(".reserviste")) {
+            createReserviste();
+          }
+
+          autoSave();
+        });
+
+        reservistesList.appendChild(wrapper);
+      }
+
+      document.addEventListener("pointerdown", event => {
+        if (!event.target.closest(".reserviste-field")) {
+          closeReservisteSuggestions();
+        }
+      });
+
+      function escapeAttr(text) {
+        return String(text)
+          .replaceAll("&", "&amp;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function collectReservistes() {
+        return [...reservistesList.querySelectorAll(".reserviste")]
+          .map(wrapper => ({
+            ...readReserviste(wrapper),
+            validated: wrapper.classList.contains("validated")
+          }))
+          .filter(reserviste =>
+            reserviste.grade ||
+            reserviste.nom ||
+            reserviste.nigend ||
+            reserviste.qualification ||
+            reserviste.unite
+          );
+      }
+
+      const DEROULEMENT_TYPES = [
+        "Début de mission",
+        "Fin de mission",
+        "Départ en patrouille",
+        "Fin de patrouille",
+        "Prise en compte armement et matériels",
+        "Restitution armement et matériels",
+        "Contrôle routier",
+        "Patrouille pédestre",
+        "Contrôle de personnes",
+        "Contrôle de véhicules",
+        "Renfort unité",
+        "Fait marquant",
+        "Autre"
+      ];
+
+      function deroulementOptions(selected = "") {
+        const first = `<option value="">Choisir un événement…</option>`;
+        const options = DEROULEMENT_TYPES.map(type => {
+          const isSelected = type === selected ? " selected" : "";
+          return `<option${isSelected}>${type}</option>`;
+        }).join("");
+        return first + options;
+      }
+
+      function normalizeDeroulementItem(data = {}) {
+        return {
+          heure: data.heure || "",
+          type: data.type || "",
+          texte: data.texte || ""
+        };
+      }
+
+      function readDeroulementItem(wrapper) {
+        return {
+          heure: wrapper.querySelector(".d-heure").value,
+          type: wrapper.querySelector(".d-type").value.trim(),
+          texte: wrapper.querySelector(".d-texte").value.trim()
+        };
+      }
+
+      function getCommittedDeroulementItem(wrapper) {
+        return normalizeDeroulementItem(wrapper._committed || readDeroulementItem(wrapper));
+      }
+
+      function updateDeroulementSummary(wrapper) {
+        const item = getCommittedDeroulementItem(wrapper);
+        const timeTarget = wrapper.querySelector(".deroulement-summary-time");
+        const textTarget = wrapper.querySelector(".deroulement-summary-text");
+
+        const heure = item.heure ? formatTime(item.heure) : "Sans heure";
+        const description = [item.type, item.texte].filter(Boolean).join(" — ");
+
+        timeTarget.textContent = heure;
+        textTarget.textContent = description || "Événement sans description";
+      }
+
+      function createDeroulementItem(data = {}) {
+        const draft = normalizeDeroulementItem(data);
+        const committed = normalizeDeroulementItem(data.committed || draft);
+        const validated = data.validated !== false;
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "deroulement-item";
+        wrapper._committed = committed;
+
+        if (validated) wrapper.classList.add("validated");
+
+        wrapper.innerHTML = `
+          <div class="deroulement-summary">
+            <div class="deroulement-summary-main">
+              <span class="deroulement-summary-time"></span>
+              <span class="deroulement-summary-text"></span>
+            </div>
+            <button type="button" class="btn btn-outline btn-small recall-deroulement">Rappeler</button>
+          </div>
+
+          <div class="deroulement-item-grid">
+            <div>
+              <label>Heure</label>
+              <input class="d-heure" type="time" value="${escapeAttr(draft.heure)}" />
+            </div>
+            <div>
+              <label>Événement</label>
+              <select class="d-type">${deroulementOptions(draft.type)}</select>
+            </div>
+            <div class="detail-wrap">
+              <label>Texte libre / précision</label>
+              <textarea class="d-texte" rows="2" placeholder="Précision facultative…">${escapeHtml(draft.texte)}</textarea>
+            </div>
+            <div class="deroulement-item-actions">
+              <button type="button" class="btn btn-primary btn-small validate-deroulement">Valider</button>
+              <button type="button" class="btn btn-danger btn-small remove-deroulement">Supprimer</button>
+            </div>
+          </div>
+        `;
+
+        wrapper.querySelector(".recall-deroulement").addEventListener("click", () => {
+          wrapper.classList.remove("validated");
+          autoSave();
+          wrapper.scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => wrapper.querySelector(".d-heure").focus(), 250);
+        });
+
+        wrapper.querySelector(".validate-deroulement").addEventListener("click", () => {
+          const newItem = readDeroulementItem(wrapper);
+
+          if (!newItem.heure && !newItem.type && !newItem.texte) {
+            showStatus("La vignette est vide.");
+            return;
+          }
+
+          const oldItem = getCommittedDeroulementItem(wrapper);
+          wrapper._committed = normalizeDeroulementItem(newItem);
+          wrapper.classList.add("validated");
+          updateDeroulementSummary(wrapper);
+          sortDeroulementDom();
+          syncFinalAfterCommittedChange("update", oldItem, newItem);
+          autoSave();
+          showStatus("Vignette validée et replacée dans l’ordre chronologique.");
+        });
+
+        wrapper.querySelector(".remove-deroulement").addEventListener("click", () => {
+          const oldItem = getCommittedDeroulementItem(wrapper);
+          wrapper.remove();
+          updateDeroulementEmptyState();
+          sortDeroulementDom();
+          syncFinalAfterCommittedChange("delete", oldItem, null);
+          autoSave();
+        });
+
+        wrapper.querySelectorAll("input, select, textarea").forEach(input => {
+          input.addEventListener("input", autoSave);
+          input.addEventListener("change", autoSave);
+        });
+
+        updateDeroulementSummary(wrapper);
+        deroulementList.appendChild(wrapper);
+        updateDeroulementEmptyState();
+        return wrapper;
+      }
+
+      function escapeHtml(text) {
+        return String(text)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+      }
+
+      function updateDeroulementEmptyState() {
+        const existing = deroulementList.querySelector(".deroulement-empty");
+        const hasItems = deroulementList.querySelector(".deroulement-item");
+
+        if (!hasItems && !existing) {
+          const empty = document.createElement("div");
+          empty.className = "deroulement-empty";
+          empty.textContent = "Aucun événement ajouté pour le moment.";
+          deroulementList.appendChild(empty);
+        } else if (hasItems && existing) {
+          existing.remove();
+        }
+      }
+
+      function collectDeroulement() {
+        return [...deroulementList.querySelectorAll(".deroulement-item")]
+          .map(getCommittedDeroulementItem)
+          .filter(item => item.heure || item.type || item.texte);
+      }
+
+      function collectDeroulementForStorage() {
+        return [...deroulementList.querySelectorAll(".deroulement-item")].map(wrapper => {
+          const draft = readDeroulementItem(wrapper);
+          return {
+            ...draft,
+            committed: getCommittedDeroulementItem(wrapper),
+            validated: wrapper.classList.contains("validated")
+          };
+        });
+      }
+
+      function timeToMinutes(time) {
+        if (!time || !time.includes(":")) return null;
+        const [hours, minutes] = time.split(":").map(Number);
+        if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+        return hours * 60 + minutes;
+      }
+
+      function deroulementSortKey(item) {
+        let minutes = timeToMinutes(item.heure);
+        if (minutes === null) return Number.MAX_SAFE_INTEGER;
+
+        const missionStart = timeToMinutes(value("heureDebut"));
+        const missionEnd = timeToMinutes(value("heureFin"));
+        const crossesMidnight = missionStart !== null
+          && missionEnd !== null
+          && missionEnd <= missionStart;
+
+        // Comme dans BorderForce : les horaires après minuit restent à la suite
+        // de ceux du soir. La marge d'une heure permet un événement juste avant
+        // l'heure officielle de début (prise en compte du matériel, par exemple).
+        if (crossesMidnight && minutes < missionStart - 60) {
+          minutes += 24 * 60;
+        }
+
+        return minutes;
+      }
+
+      function sortDeroulementData(items) {
+        return items
+          .map((item, index) => ({ ...item, _index: index }))
+          .sort((a, b) => {
+            const byTime = deroulementSortKey(a) - deroulementSortKey(b);
+            return byTime || a._index - b._index;
+          })
+          .map(({ _index, ...item }) => item);
+      }
+
+      function sortDeroulementDom() {
+        const items = [...deroulementList.querySelectorAll(".deroulement-item")];
+        items.sort((a, b) => {
+          const byTime = deroulementSortKey(getCommittedDeroulementItem(a))
+            - deroulementSortKey(getCommittedDeroulementItem(b));
+          return byTime;
+        });
+
+        items.forEach(item => deroulementList.appendChild(item));
+        updateDeroulementEmptyState();
+        updateDeroulementLivePreview();
+      }
+
+      function readPendingDeroulement() {
+        return {
+          heure: el("deroulementHeure").value,
+          type: el("deroulementType").value.trim(),
+          texte: el("deroulementTexte").value.trim()
+        };
+      }
+
+      function clearPendingDeroulement() {
+        el("deroulementHeure").value = "";
+        el("deroulementType").value = "";
+        el("deroulementTexte").value = "";
+      }
+
+      function addPendingDeroulement(showMessage = true) {
+        const item = readPendingDeroulement();
+        if (!item.heure && !item.type && !item.texte) {
+          if (showMessage) showStatus("Renseigne au moins une heure, un événement ou une précision.");
+          return false;
+        }
+
+        createDeroulementItem({ ...item, committed: item, validated: true });
+        clearPendingDeroulement();
+        sortDeroulementDom();
+        syncFinalAfterCommittedChange("add", null, item);
+        autoSave();
+
+        if (showMessage) showStatus("Événement validé, ajouté au final et classé automatiquement.");
+        el("deroulementHeure").focus();
+        return true;
+      }
+
+      function formatDeroulementLine(item) {
+        const heure = item.heure ? formatTime(item.heure) : "";
+        const description = [item.type, item.texte].filter(Boolean).join(" — ");
+        if (heure && description) return `${heure} - ${description}`;
+        return heure || description;
+      }
+
+      function buildDeroulementText() {
+        return sortDeroulementData(collectDeroulement())
+          .map(formatDeroulementLine)
+          .filter(Boolean)
+          .join("\n");
+      }
+
+      function lineSortKey(line) {
+        const match = String(line).trim().match(/^(\d{1,2})h(\d{2})\b/);
+        if (!match) return Number.MAX_SAFE_INTEGER;
+        const heure = `${String(match[1]).padStart(2, "0")}:${match[2]}`;
+        return deroulementSortKey({ heure });
+      }
+
+      function insertLineChronologically(lines, newLine) {
+        if (!newLine) return lines;
+        const key = lineSortKey(newLine);
+
+        if (key === Number.MAX_SAFE_INTEGER) {
+          lines.push(newLine);
+          return lines;
+        }
+
+        let insertAt = lines.length;
+        for (let i = 0; i < lines.length; i += 1) {
+          const currentKey = lineSortKey(lines[i]);
+          if (currentKey > key) {
+            insertAt = i;
+            break;
+          }
+        }
+
+        lines.splice(insertAt, 0, newLine);
+        return lines;
+      }
+
+      function syncFinalAfterCommittedChange(action, oldItem, newItem) {
+        const target = el("deroulementFinalText");
+        if (!target) return;
+
+        if (!deroulementFinalEdited) {
+          updateDeroulementLivePreview(true);
+          return;
+        }
+
+        let lines = target.value ? target.value.split(/\r?\n/) : [];
+        const oldLine = oldItem ? formatDeroulementLine(oldItem) : "";
+        const newLine = newItem ? formatDeroulementLine(newItem) : "";
+
+        if (action === "add") {
+          insertLineChronologically(lines, newLine);
+        }
+
+        if (action === "delete") {
+          const index = lines.findIndex(line => line.trim() === oldLine.trim());
+          if (index >= 0) lines.splice(index, 1);
+        }
+
+        if (action === "update") {
+          const index = lines.findIndex(line => line.trim() === oldLine.trim());
+
+          if (index >= 0) {
+            lines.splice(index, 1);
+            insertLineChronologically(lines, newLine);
+          } else if (oldLine !== newLine) {
+            showStatus("La ligne du final avait été modifiée manuellement : elle a été conservée. Vérifie le déroulement final.");
+          }
+        }
+
+        target.value = lines.join("\n");
+        updateDeroulementFinalStatus();
+      }
+
+
+      function updateDeroulementFinalStatus() {
+        const statusTarget = el("deroulementFinalStatus");
+        if (!statusTarget) return;
+        statusTarget.textContent = deroulementFinalEdited
+          ? "Texte final modifié manuellement — les nouvelles vignettes sont ajoutées sans effacer tes corrections"
+          : "Synchronisé avec les vignettes";
+      }
+
+      function updateDeroulementLivePreview(force = false) {
+        const target = el("deroulementFinalText");
+        if (!target) return;
+
+        if (force || !deroulementFinalEdited) {
+          target.value = buildDeroulementText();
+        }
+
+        updateDeroulementFinalStatus();
+      }
+
+      function collectData() {
+        const data = {};
+        fieldIds.forEach(id => data[id] = el(id).value);
+        data.reservistes = collectReservistes();
+        data.deroulementItems = collectDeroulementForStorage();
+        data.deroulementSaisie = readPendingDeroulement();
+        data.deroulementFinalText = el("deroulementFinalText").value;
+        data.deroulementFinalEdited = deroulementFinalEdited;
+        return data;
+      }
+
+      function applyData(data = {}) {
+        fieldIds.forEach(id => {
+          if (Object.prototype.hasOwnProperty.call(data, id)) {
+            el(id).value = data[id] ?? "";
+          }
+        });
+
+        reservistesList.innerHTML = "";
+        const reservistes = Array.isArray(data.reservistes) && data.reservistes.length
+          ? data.reservistes
+          : [{}];
+        reservistes.forEach(createReserviste);
+
+        deroulementList.innerHTML = "";
+        let deroulementItems = Array.isArray(data.deroulementItems)
+          ? data.deroulementItems
+          : [];
+
+        // Compatibilité avec la toute première version qui utilisait
+        // une seule grande zone de texte.
+        if (!deroulementItems.length && data.deroulement) {
+          deroulementItems = [{
+            heure: "",
+            type: "",
+            texte: data.deroulement,
+            committed: { heure: "", type: "", texte: data.deroulement },
+            validated: true
+          }];
+        }
+
+        deroulementItems.forEach(createDeroulementItem);
+        sortDeroulementDom();
+        updateDeroulementEmptyState();
+
+        const pending = data.deroulementSaisie || {};
+        el("deroulementHeure").value = pending.heure || "";
+        el("deroulementType").value = pending.type || "";
+        el("deroulementTexte").value = pending.texte || "";
+
+        if (Object.prototype.hasOwnProperty.call(data, "deroulementFinalText")) {
+          deroulementFinalEdited = Boolean(data.deroulementFinalEdited);
+          el("deroulementFinalText").value = data.deroulementFinalText || "";
+          updateDeroulementFinalStatus();
+        } else {
+          deroulementFinalEdited = false;
+          updateDeroulementLivePreview(true);
+        }
+      }
+
+      function saveDraft(showMessage = true) {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(collectData()));
+        if (showMessage) showStatus("Brouillon enregistré sur cet appareil.");
+      }
+
+      let autoSaveTimer;
+      function autoSave() {
+        clearTimeout(autoSaveTimer);
+        autoSaveTimer = setTimeout(() => saveDraft(false), 2000);
+      }
+
+      function loadDraft() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            applyData(JSON.parse(raw));
+            showStatus("Brouillon précédent restauré.");
+          } else {
+            applyData({});
+            setToday();
+          }
+        } catch (error) {
+          console.error(error);
+          applyData({});
+          setToday();
+        }
+      }
+
+      function setToday() {
+        if (!el("dateMission").value) {
+          const now = new Date();
+          const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+          el("dateMission").value = local.toISOString().slice(0, 10);
+        }
+      }
+
+      function formatDate(dateString) {
+        if (!dateString) return "";
+        const [year, month, day] = dateString.split("-");
+        return day && month && year ? `${day}/${month}/${year}` : dateString;
+      }
+
+      function formatTime(time) {
+        return time ? time.replace(":", "h") : "";
+      }
+
+      function buildHoraires() {
+        const debut = formatTime(value("heureDebut"));
+        const fin = formatTime(value("heureFin"));
+        if (debut && fin) return `${debut} - ${fin}`;
+        return debut || fin;
+      }
+
+      function plural(n, singular, pluralForm) {
+        return `${n} ${Number(n) === 1 ? singular : pluralForm}`;
+      }
+
+      function buildDsiText() {
+        const veh = value("vehiculesControles");
+        const pers = value("personnesControlees");
+        if (veh === "" && pers === "") return "";
+        const vehValue = veh === "" ? 0 : Number(veh);
+        const persValue = pers === "" ? 0 : Number(pers);
+        return `${plural(vehValue, "véhicule contrôlé", "véhicules contrôlés")} et ${plural(persValue, "personne contrôlée", "personnes contrôlées")}.`;
+      }
+
+      function buildReservistesText() {
+        return collectReservistes().map((r, index) => {
+          const identite = [r.grade, r.nom].filter(Boolean).join(" ");
+          const details = [r.qualification, r.unite].filter(Boolean).join(" — ");
+          const content = [identite, details].filter(Boolean).join(" — ");
+          return `${index + 1}. ${content}`;
+        }).join("\n");
+      }
+
+      function setOutput(id, text) {
+        const target = el(id);
+        target.textContent = text || "";
+        target.classList.toggle("empty", !text);
+      }
+
+      function generateReport() {
+        addPendingDeroulement(false);
+        saveDraft(false);
+
+        setOutput("outRedacteur", value("redacteur"));
+        setOutput("outDate", formatDate(value("dateMission")));
+        setOutput("outHoraires", buildHoraires());
+        setOutput("outUnite", value("uniteRenforcee"));
+        setOutput("outLieu", value("lieuConvocation"));
+        setOutput("outNature", value("natureMission"));
+        setOutput("outReservistes", buildReservistesText());
+        setOutput("outDeroulement", value("deroulementFinalText") || buildDeroulementText());
+        setOutput("outRoute", value("infractionsRoute"));
+        setOutput("outAutres", value("autresInfractions"));
+        setOutput("outDsi", buildDsiText());
+        setOutput("outCommentaires", value("commentaires"));
+
+        formView.classList.add("hidden");
+        previewView.classList.remove("hidden");
+        window.scrollTo({ top: 0, behavior: "instant" });
+        fitPreviewOnMobile();
+      }
+
+      function fitPreviewOnMobile() {
+        const paper = document.querySelector(".report-paper");
+        const wrap = document.querySelector(".paper-wrap");
+        paper.style.transform = "";
+        wrap.style.height = "";
+
+        if (window.innerWidth < 820) {
+          const available = window.innerWidth - 24;
+          const scale = Math.min(1, available / paper.offsetWidth);
+          paper.style.transformOrigin = "top left";
+          paper.style.transform = `scale(${scale})`;
+          wrap.style.height = `${paper.offsetHeight * scale + 24}px`;
+          wrap.style.width = `${paper.offsetWidth * scale + 24}px`;
+          wrap.style.margin = "0 auto";
+          wrap.style.overflow = "hidden";
+        } else {
+          wrap.style.width = "";
+          wrap.style.height = "";
+          wrap.style.margin = "";
+          wrap.style.overflow = "";
+        }
+      }
+
+      function showStatus(message) {
+        status.textContent = message;
+        clearTimeout(showStatus.timer);
+        showStatus.timer = setTimeout(() => status.textContent = "", 2600);
+      }
+
+      function clearAll() {
+        const confirmed = confirm("Effacer le compte rendu actuel et en commencer un nouveau ?");
+        if (!confirmed) return;
+
+        // Seul le grade et le nom du rédacteur restent dans le nouveau CR.
+        const redacteurConserve = value("redacteur");
+
+        clearTimeout(autoSaveTimer);
+
+        // On supprime uniquement le brouillon de la mission en cours.
+        // La mémoire séparée KNOWN_RESERVISTES_KEY n'est pas touchée :
+        // tous les ESR déjà connus restent disponibles dans les suggestions.
+        localStorage.removeItem(STORAGE_KEY);
+
+        deroulementFinalEdited = false;
+        parsedEsrMissions = [];
+
+        // Remise à zéro explicite de TOUS les champs de la mission.
+        // La date est également vidée : elle n'est pas remise automatiquement à aujourd'hui.
+        const nouveauCompteRendu = {
+          redacteur: redacteurConserve,
+          dateMission: "",
+          heureDebut: "",
+          heureFin: "",
+          uniteRenforcee: "",
+          lieuConvocation: "",
+          natureMission: "",
+          infractionsRoute: "",
+          autresInfractions: "",
+          vehiculesControles: "",
+          personnesControlees: "",
+          commentaires: "",
+          reservistes: [],
+          deroulementItems: [],
+          deroulementSaisie: {
+            heure: "",
+            type: "",
+            texte: ""
+          },
+          deroulementFinalText: "",
+          deroulementFinalEdited: false
+        };
+
+        applyData(nouveauCompteRendu);
+
+        // Nettoyage des informations temporaires liées à un éventuel import ESR.
+        setEsrImportStatus("");
+        esrFileInput.value = "";
+        closeEsrMissionModal();
+
+        // Le nouveau brouillon vide est enregistré immédiatement avec le rédacteur conservé.
+        saveDraft(false);
+
+        showStatus("Nouveau compte rendu prêt. Seul le rédacteur et la mémoire des ESR connus ont été conservés.");
+        showSection("mission", false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      sectionMenu.addEventListener("click", event => {
+        const button = event.target.closest("button[data-target]");
+        if (!button) return;
+        showSection(button.dataset.target);
+      });
+
+      document.getElementById("menuGenerateBtn").addEventListener("click", generateReport);
+      const storedSection = localStorage.getItem(STORAGE_KEY + "_section");
+      showSection(storedSection || "mission", false);
+
+      document.getElementById("addReserviste").addEventListener("click", () => {
+        createReserviste();
+        reservistesList.lastElementChild.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+
+      importEsrBtn.addEventListener("click", () => {
+        esrFileInput.click();
+      });
+
+      esrFileInput.addEventListener("change", () => {
+        handleEsrPdfImport(esrFileInput.files?.[0]);
+      });
+
+      document.getElementById("closeEsrModalBtn").addEventListener("click", closeEsrMissionModal);
+
+      esrMissionModal.addEventListener("click", event => {
+        if (event.target === esrMissionModal) closeEsrMissionModal();
+      });
+
+      document.getElementById("addDeroulement").addEventListener("click", () => {
+        addPendingDeroulement(true);
+      });
+
+      ["deroulementHeure", "deroulementType", "deroulementTexte"].forEach(id => {
+        el(id).addEventListener("input", autoSave);
+        el(id).addEventListener("change", autoSave);
+      });
+
+      el("deroulementTexte").addEventListener("keydown", event => {
+        if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+          event.preventDefault();
+          addPendingDeroulement(true);
+        }
+      });
+
+      el("deroulementFinalText").addEventListener("input", () => {
+        deroulementFinalEdited = true;
+        updateDeroulementFinalStatus();
+        autoSave();
+      });
+
+      document.getElementById("rebuildDeroulementBtn").addEventListener("click", () => {
+        deroulementFinalEdited = false;
+        updateDeroulementLivePreview(true);
+        autoSave();
+        showStatus("Le déroulement final a été recomposé depuis les vignettes.");
+      });
+
+      document.getElementById("clearBtn").addEventListener("click", clearAll);
+
+      document.getElementById("backBtn").addEventListener("click", () => {
+        previewView.classList.add("hidden");
+        formView.classList.remove("hidden");
+        showSection(currentSection, false);
+        window.scrollTo({ top: 0, behavior: "instant" });
+      });
+
+      function preparePrint() {
+        const paper = document.querySelector(".report-paper");
+        const wrap = document.querySelector(".paper-wrap");
+
+        // Supprime les styles d'aperçu mobile avant l'ouverture de la boîte
+        // d'impression. Le CSS @media print prend ensuite le relais en A4.
+        paper.style.transform = "none";
+        paper.style.transformOrigin = "initial";
+        wrap.style.width = "";
+        wrap.style.height = "";
+        wrap.style.margin = "";
+        wrap.style.overflow = "visible";
+      }
+
+      document.getElementById("printBtn").addEventListener("click", () => {
+        preparePrint();
+        setTimeout(() => window.print(), 60);
+      });
+
+      window.addEventListener("beforeprint", preparePrint);
+      window.addEventListener("afterprint", () => {
+        if (!previewView.classList.contains("hidden")) {
+          fitPreviewOnMobile();
+        }
+      });
+
+      fieldIds.forEach(id => {
+        el(id).addEventListener("input", autoSave);
+        el(id).addEventListener("change", () => {
+          autoSave();
+          if (id === "heureDebut" || id === "heureFin") sortDeroulementDom();
+        });
+      });
+
+      window.addEventListener("resize", () => {
+        if (!previewView.classList.contains("hidden")) fitPreviewOnMobile();
+      });
+
+      loadDraft();
+    })();
+  </script>
+
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", async () => {
+        try {
+          const registration = await navigator.serviceWorker.register(
+            "./service-worker.js",
+            { scope: "./" }
+          );
+          registration.update();
+          console.log("Service worker actif :", registration.scope);
+        } catch (error) {
+          console.error("Échec de l’installation du service worker :", error);
+        }
+      });
+    }
+  </script>
+
+</body>
+</html>
